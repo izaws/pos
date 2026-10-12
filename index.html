@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>收銀機</title>
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="收銀機">
+<meta name="theme-color" content="#f2f2f2">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+:root{--bg:#f2f2f2;--card:#fff;--tx:#1f1f21;--sub:#8c8c91;--chip:#e8e8ea;--ln:#e4e4e6;--beige:#ebe8e3;--ac:#2f2f33;--red:#cf490e;--g:var(--ac);--gt:#fff;--sel:#fff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--tx);font:15px/1.4 -apple-system,"PingFang TC","Noto Sans TC",sans-serif;overflow:hidden}
+#app{height:100%;display:flex;flex-direction:column}
+.page{display:none;flex:1;overflow-y:auto;padding:14px 18px 170px}
+.page.on{display:block}
+h1{font-size:20px;font-weight:700;text-align:center;margin:8px 0 14px}h3{font-size:18px;font-weight:700;margin:4px 0 12px}button{font-family:inherit}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.top b{font-size:22px;font-weight:700;display:block;line-height:1.2}.top .es{font-size:13px;color:var(--sub);margin-top:2px}
+.mb{width:42px;height:42px;border-radius:50%;background:var(--chip);border:0;color:var(--tx);display:flex;align-items:center;justify-content:center;padding:0}.mb .ic{width:22px;height:22px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px 10px}
+.card{position:relative;user-select:none}
+.imw{position:relative}
+.card .im{aspect-ratio:1;border-radius:12px;background:var(--beige) center/cover;display:flex;align-items:center;justify-content:center;color:#b8b2a8}
+.card.in .im{box-shadow:0 0 0 2.5px var(--g)}
+.card .nm{padding:7px 2px 0;font-size:14px;font-weight:600;line-height:1.3;min-height:36px}
+.card .pr{padding:0 2px;color:var(--sub);font-size:13px}
+.card .im .ic{width:36px;height:36px}
+.stk{position:absolute;left:0;top:0;background:rgba(47,47,51,.85);color:#fff;font-weight:600;padding:2px 9px;border-radius:12px 0 10px 0;font-size:12px}
+.stk.z{background:#8c8c91}
+.minus{position:absolute;right:6px;top:6px;width:28px;height:28px;border-radius:50%;background:var(--g);color:#fff;border:0;font-size:18px;line-height:1;padding:0}
+.qb{position:absolute;right:6px;bottom:6px;min-width:24px;height:24px;padding:0 7px;border-radius:12px;background:var(--red);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+#bar{position:fixed;left:0;right:0;bottom:calc(86px + env(safe-area-inset-bottom,0px));padding:10px 18px;display:flex;gap:12px;align-items:center;background:var(--bg);border-top:1px solid var(--ln);z-index:5}
+#bar .t{font-size:24px;font-weight:700;color:var(--red);flex:1;text-align:right}
+.btn{background:var(--g);color:var(--gt);border:0;border-radius:14px;padding:14px 20px;font-size:16px;font-weight:600}
+.btn.o{background:var(--chip);color:var(--tx);border:0}
+.btn:disabled{opacity:.35}
+#tabs{position:fixed;left:16px;right:16px;bottom:calc(10px + env(safe-area-inset-bottom,0px));height:66px;background:var(--card);border-radius:33px;display:flex;padding:6px;box-shadow:0 4px 20px rgba(0,0,0,.1);z-index:6;border:1px solid var(--ln)}
+#tabs button{flex:1;border:0;background:none;border-radius:27px;color:var(--sub);font-size:11px;font-weight:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+#tabs button span{font-size:22px}
+#tabs button.on{background:var(--g);color:#fff}
+.chips{display:flex;gap:8px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px}
+.chips.wrap{flex-wrap:wrap;overflow:visible;margin:0}
+.chip{border:0;border-radius:20px;padding:8px 16px;background:var(--chip);color:var(--sub);white-space:nowrap;font-size:14px;font-weight:500}
+.chip.on{background:var(--g);color:#fff}
+.sw{position:relative;margin-bottom:10px;border-radius:16px;overflow:hidden;touch-action:pan-y}
+.sw .del{position:absolute;right:0;top:0;bottom:0;width:84px;background:var(--red);color:#fff;border:0;font-size:14px}
+.sw .in{position:relative;background:var(--card);padding:13px 16px;border-radius:16px;transition:transform .2s;cursor:pointer}
+.sw.open .in{transform:translateX(-84px)}
+.row{display:flex;justify-content:space-between;align-items:center}
+.pill{display:inline-block;border-radius:10px;padding:1px 9px;font-size:12px;color:#fff;margin-left:6px;background:#6b6b70;font-weight:500}
+.pill.p{background:var(--red)}.pill.q{background:var(--ac)}.pill.s{background:#a3a3a8}.pill.gf{background:#b3aca1}
+.sub{color:var(--sub);font-size:12px;margin-top:3px}
+.list{background:var(--card);border-radius:16px;padding:2px 16px;margin-bottom:16px}
+.li{display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--ln);font-size:15px}
+.li:last-child{border:0}
+.sec{color:var(--sub);font-size:13px;font-weight:600;margin:20px 4px 8px}
+.lnk{color:var(--tx);background:none;border:0;font-size:15px;font-weight:500;padding:0}
+input,select,textarea{font:inherit;color:var(--tx);background:var(--card);border:0;outline:0;border-radius:12px;padding:12px;width:100%}.pay input{background:var(--bg)}
+select{-webkit-appearance:none;appearance:none;background-image:none}
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:20;display:none;align-items:flex-end}
+.mask.on{display:flex}
+.sheet{background:var(--bg);width:100%;border-radius:26px 26px 0 0;padding:18px;max-height:94%;overflow:auto;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}
+.tall,#co{height:92%;height:calc(100dvh - 20px - env(safe-area-inset-top,0px));max-height:none}
+#co{display:flex;flex-direction:column;padding:14px 16px calc(12px + env(safe-area-inset-bottom,0px))}
+#coItems{flex:1;overflow:auto;min-height:90px}
+.ci{display:flex;align-items:center;gap:8px;background:var(--card);border-radius:12px;padding:8px 10px;margin-bottom:6px;font-size:14px}
+.ci .n{flex:1}
+.ci label{font-size:12px;color:var(--sub);display:flex;gap:4px;align-items:center}
+.ci label input{width:18px;height:18px;padding:0}
+.q{display:flex;align-items:center;gap:8px}
+.q button{width:28px;height:28px;border-radius:50%;border:0;background:var(--chip);color:var(--tx);font-size:16px;padding:0}
+.rm{background:var(--beige);color:var(--tx);border-radius:10px;padding:8px 10px;font-size:13px;margin-bottom:6px}
+.pay{background:var(--card);border-radius:16px;padding:10px 14px;margin:6px 0;font-size:14px}
+.pay .row{padding:2px 0}
+.big{font-size:26px;font-weight:700;color:var(--red)}
+.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:8px}
+.keys button{background:#e3e3e5;color:var(--tx);border:0;border-radius:12px;font-size:20px;font-weight:500;padding:12px 0}
+.keys button.k2{background:#e3e3e5;color:#55555a;font-size:12px;font-weight:500}
+.keys button:active{filter:brightness(.93)}
+.toast{position:fixed;top:calc(20px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);background:var(--ac);color:#fff;padding:10px 18px;border-radius:20px;z-index:50;display:none;font-size:14px}
+.empty{text-align:center;color:var(--sub);padding:40px 0;font-size:14px}
+input[type=number]{-moz-appearance:textfield;appearance:textfield}input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.ic{width:1em;height:1em;fill:currentColor;vertical-align:-.15em}
+#tabs button .ic{width:24px;height:24px}
+.rm .ic{margin-right:4px}.rw{display:flex;align-items:center;gap:12px}
+.bk{width:32px;height:32px;border-radius:9px;background:var(--chip);color:var(--tx);display:flex;align-items:center;justify-content:center;flex:none}.bk .ic{width:18px;height:18px}
+.bk.t{background:var(--chip);color:var(--tx)}
+.ck{color:var(--red);font-style:normal;display:inline-flex;align-items:center;gap:4px;font-size:13px}
+.sw2{display:flex;flex-wrap:wrap;gap:12px}.sw2 button{width:44px;height:44px;border-radius:12px;border:0;color:#fff;display:flex;align-items:center;justify-content:center}.sw2 .ic{width:22px;height:22px}
+.tn{width:48px;height:48px;border-radius:12px;background:var(--beige) center/cover;color:#b8b2a8;display:flex;align-items:center;justify-content:center;flex:none}
+input[type=color]{height:46px;padding:4px}
+.grp{background:var(--card);border-radius:18px;padding:0 16px;margin-bottom:6px}.grp .li{padding:13px 0;gap:12px}.grp input{background:none;border:0}
+.cap{color:var(--sub);font-size:12px;margin:6px 8px 14px;line-height:1.5}
+.tg{width:48px;height:30px;border-radius:15px;background:#d4d4d8;position:relative;flex:none;border:0;padding:0}.tg:after{content:'';position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:.2s}.tg.on{background:var(--ac)}.tg.on:after{left:21px}
+.chv{color:var(--sub);flex:none;width:20px;height:20px}
+.ph{display:flex;align-items:center;gap:10px;margin-bottom:12px;position:relative}.ph h1{flex:1;text-align:center;margin:0}
+.rb{width:42px;height:42px;border-radius:50%;background:var(--chip);border:0;color:var(--tx);display:flex;align-items:center;justify-content:center;padding:0;flex:none}.rb .ic{width:22px;height:22px}
+.srch{display:flex;align-items:center;gap:8px;background:var(--chip);border-radius:22px;padding:0 14px;margin-bottom:12px}.srch input{border:0;background:none;padding:11px 0;font-size:15px}.srch .ic{color:var(--sub);width:20px;height:20px;flex:none}
+.p2{background:var(--chip);border:0;border-radius:99px;padding:9px 18px;font-size:15px;font-weight:500;color:var(--tx)}
+.dkc{width:34px;height:34px;border-radius:50%;background:var(--ac);color:#fff;display:flex;align-items:center;justify-content:center}.dkc .ic{width:20px;height:20px}
+.pm,.dm{display:none;position:absolute;right:0;top:52px;background:#fff;border-radius:18px;box-shadow:0 8px 28px rgba(0,0,0,.14);z-index:10;min-width:220px;max-width:78vw;overflow:hidden}.pm.on,.dm.on{display:block}
+.mi2,.dm .mi{display:flex;align-items:center;gap:14px;padding:15px 20px;font-size:15px;cursor:pointer}.mi2+.mi2,.dm .mi+.mi{border-top:1px solid var(--ln)}.dm .mi{justify-content:space-between}.mi2 .ic{width:20px;height:20px}
+.dm .cap0{padding:12px 20px 4px;font-size:12px;color:var(--sub)}
+#pl{border-top:1px solid var(--ln)}.pw{border-radius:0;margin:0}.pw .in{background:var(--bg);border-radius:0;border-bottom:1px solid var(--ln);padding:10px 0}
+.pw .del{background:none;color:var(--sub);font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}.pw .del i{width:44px;height:44px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center}.pw .del i .ic{width:22px;height:22px}
+.pn{flex:1;min-width:0;font-size:14px;font-weight:600;line-height:1.35}.pn .sub{font-weight:400}.pp{font-size:14px;font-weight:600;color:var(--tx)}
+.fld{display:flex;align-items:center;gap:6px;background:var(--card);border-radius:14px;padding:0 14px}.fld input{border:0;background:none;padding:12px 0;font-size:15px}
+.imgb{width:108px;height:108px;border-radius:22px;background:var(--beige) center/cover;display:flex;align-items:center;justify-content:center;color:#b8b2a8;flex:none}.imgb .ic{width:44px;height:44px}
+.grp select{background:none;border:0;padding:6px 0}
+.sw.s2.open .in{transform:translateX(-168px)}.sw .cp2{position:absolute;right:84px;top:0;bottom:0;width:84px;background:#8c8c91;color:#fff;border:0;font-size:14px}.sw.evr{border-radius:0;margin:0}.sw.evr .in{border-radius:0;border-bottom:1px solid var(--ln);padding:15px 16px}
+#ask{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:30;display:none;align-items:center;justify-content:center}#ask.on{display:flex}.ab{background:var(--card);border-radius:20px;padding:22px;width:min(82vw,320px);text-align:center}.ab p{margin:0 0 18px;font-size:16px;font-weight:600}.ab div{display:flex;gap:12px}.ab button{flex:1}
+.grid{gap:12px 8px}
+.card .im{aspect-ratio:3/4}
+.card .nm{padding:5px 2px 0;line-height:1.25;min-height:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .pr{line-height:1.2;margin-top:1px}
+.sw .cp2{background:var(--ac)}
+#tabs{height:74px;padding:9px 6px}#tabs button{gap:4px;padding:2px 0 3px}
+#bar{bottom:calc(98px + env(safe-area-inset-bottom,0px))}
+.page{padding-bottom:190px}
+.btn.dis{opacity:.35}
+.pill{font-size:11px}
+#md.tall{display:flex;flex-direction:column;overflow:hidden}
+.sh{flex:none;padding-bottom:12px}.sbody{flex:1;min-height:0;overflow:auto;padding-bottom:12px}
+.pk{background:var(--card);border-radius:14px;max-height:26vh;overflow:auto}.pki{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--ln);font-size:14px}.pki:last-child{border:0}.pki.on{font-weight:600}.pki .ic{color:var(--red);width:18px;height:18px}
+.bi{width:22px;height:22px;border-radius:7px;color:#fff;font-size:13px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex:none}.bi .ic{width:14px;height:14px}
+.lk{display:inline-flex;align-items:center;gap:8px;color:var(--tx);text-decoration:none;font-size:14px;min-width:0;max-width:70vw}.lk span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ovl{position:fixed;inset:0;background:var(--bg);z-index:40;display:none;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}.ovl.on{display:flex}
+#ied .iec{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:6px 16px}
+#iecv{height:100%;max-height:520px;aspect-ratio:3/4;border-radius:14px;touch-action:none;background:var(--beige);box-shadow:0 2px 14px rgba(0,0,0,.12)}
+#ied .iet{padding:8px 20px calc(18px + env(safe-area-inset-bottom,0px));display:grid;gap:10px;font-size:13px;color:var(--sub)}
+#ied .iet label{display:flex;align-items:center;gap:10px}#ied .iet input[type=range]{padding:0;background:none;flex:1;accent-color:var(--ac)}
+#login{justify-content:center;padding:24px}#login .lb{max-width:360px;width:100%;margin:0 auto;display:grid;gap:12px}#login h1{margin:0 0 6px}
+
+.sw .del,.sw .cp2{opacity:0;transition:opacity .12s}.sw.open .del,.sw.open .cp2{opacity:1}
+.pw .del{background:var(--red);color:#fff;font-size:14px;display:block;flex-direction:initial;gap:0}
+.ot{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0}
+.pill{display:inline-flex;align-items:center;white-space:nowrap;margin:0;padding:2px 9px;line-height:1.4;width:auto}
+#tabs{height:78px;padding:8px 6px}#tabs button{gap:2px;padding:0;line-height:1.2}#tabs button .ic{width:22px;height:22px}
+#bar{bottom:calc(102px + env(safe-area-inset-bottom,0px))}.page{padding-bottom:196px}
+.evb{display:inline-flex;align-items:center;gap:6px;max-width:58vw;height:40px;background:var(--chip);border:0;border-radius:20px;padding:0 14px;font-size:14px;font-weight:600;color:var(--tx)}.evb span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.evb .ic{width:14px;height:14px;flex:none}
+.dm{top:46px}
+.logo{height:46px;max-width:55vw;object-fit:contain;margin-top:12px}.lgt{font-size:22px;font-weight:700;margin-top:12px}
+.p2.sm{padding:6px 14px;font-size:13px}
+.bi{width:24px;height:24px}
+
+#tabs{height:68px;padding:6px}#tabs button{gap:2px}
+#bar{bottom:calc(90px + env(safe-area-inset-bottom,0px))}.page{padding-bottom:184px}
+.ci .tn{width:42px;height:42px;border-radius:10px}.ci .tn .ic{width:20px;height:20px}
+.dkb{width:42px;height:42px;border-radius:50%;background:var(--ac);color:#fff;border:0;padding:0;display:flex;align-items:center;justify-content:center;flex:none}.dkb .ic{width:22px;height:22px}
+.hd{touch-action:none;color:var(--sub);display:flex;padding:6px 4px;cursor:grab;flex:none}.hd .ic{width:20px;height:20px}
+.gr{transition:transform .12s;background:var(--card)}.gr input{min-width:0;flex:1}.gr .lnk{white-space:nowrap;flex:none;color:var(--red)}
+img.bi{background:#fff;border:1px solid var(--ln);object-fit:contain;border-radius:6px;padding:2px}
+.sw .del,.sw .cp2{top:6px;bottom:6px;width:58px;border-radius:14px;font-size:13px;white-space:nowrap}
+.sw .del{right:8px}.sw .cp2{right:74px}
+.sw.open .in{transform:translateX(-74px)}.sw.s2.open .in{transform:translateX(-140px)}
+
+#co{height:100%;height:100dvh;max-height:none;border-radius:0;padding:calc(10px + env(safe-area-inset-top,0px)) 14px calc(10px + env(safe-area-inset-bottom,0px))}
+.ci{padding:8px 10px;gap:10px}.ci .tn{width:68px;height:68px;border-radius:12px}.ci .tn .ic{width:26px;height:26px}.ci .n{font-size:15px;font-weight:600}
+.pay{padding:6px 12px;margin:4px 0;font-size:13px}.pay .row{padding:0;min-height:26px}.pay input{padding:5px 10px;font-size:14px}.pay b{font-size:16px!important}.big{font-size:22px}
+.keys{gap:6px;margin-bottom:6px}.keys button{padding:9px 0;font-size:18px}.keys button.k2{font-size:12px}
+.cob{display:flex;gap:10px}.cob .btn{padding:12px}.cob .btn:last-child{flex:1}.cob .btn.o{flex:none;padding:12px 22px}
+.pw .hd{margin-left:6px}
+/* checkout: fullscreen, bigger images, compact amount area */
+#co_m{align-items:stretch}
+#co{width:100%;height:100%;height:100dvh;max-height:none;border-radius:0}
+.ci{padding:8px 12px;gap:12px}.ci .tn{width:96px;height:96px;border-radius:14px}.ci .tn .ic{width:34px;height:34px}.ci .n{font-size:16px}
+.pay{padding:2px 12px;margin:4px 0}.pay .row{min-height:24px}.pay input{padding:3px 10px}.pay .big{font-size:20px}
+.pay .row2{display:flex;gap:14px;min-height:24px}.pay .row2>div{flex:1;display:flex;justify-content:space-between;align-items:center}
+.keys{gap:5px;margin-bottom:6px}.keys button{padding:8px 0;font-size:18px}
+.cob .btn.o{flex:none;padding:12px 26px}
+/* checkout v2: image-on-top grid items, swipe delete, roomier amount area */
+.cg{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:6px}
+.ci2{margin:0;border-radius:16px}.ci2 .in{padding:8px;display:block;cursor:default}
+.tn2{display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:1;border-radius:12px;background:var(--beige) center/cover;color:#b8b2a8;margin-bottom:6px}.tn2 .ic{width:40px;height:40px}
+.n2{font-size:15px;font-weight:600;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.gl{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--sub);margin-top:6px}.gl input{width:18px;height:18px;padding:0}
+.pay{padding:8px 14px;margin:6px 0}
+.pay .row{min-height:38px}.pay .row.lf{justify-content:flex-start;gap:12px}
+.pay .big{font-size:26px}
+.pay .row2{display:flex;min-height:38px}.pay .row2>div{flex:1;display:flex;justify-content:flex-start;align-items:center;gap:12px}
+.pay b{font-size:20px!important}
+.card{touch-action:manipulation}
+@keyframes sup{from{transform:translateY(100%)}to{transform:none}}@keyframes mf{from{opacity:0}to{opacity:1}}
+.sheet.up{animation:sup .32s cubic-bezier(.2,.85,.25,1)}.mask.on:has(.sheet.up){animation:mf .25s}
+/* checkout v3: horizontal rows */
+.cg{display:block}
+.ci3{margin:0 0 8px;border-radius:16px}.ci3 .in{display:flex;align-items:center;gap:12px;padding:8px 10px;cursor:default}
+.tn3{width:96px;height:96px;flex:none;border-radius:12px;background:var(--beige) center/cover;color:#b8b2a8;display:flex;align-items:center;justify-content:center}.tn3 .ic{width:36px;height:36px}
+.ci3 .mid{flex:1;min-width:0}.ci3 .rt{display:flex;flex-direction:column;align-items:flex-end;gap:10px;flex:none}
+/* keypad bigger */
+.keys{gap:6px;margin-bottom:7px}.keys button{padding:11px 0;font-size:20px}.keys button.k2{font-size:13px}
+.grp .li .lnk{white-space:nowrap;flex:none}.grp .li>input{flex:1;min-width:0}
+/* product grid drag handle */
+.gh{position:absolute;right:6px;top:6px;background:rgba(255,255,255,.88);color:var(--tx);border-radius:8px;padding:4px;z-index:2;margin:0}
+</style></head><body>
+<div id="app">
+<div class="page on" id="p0"></div>
+<div class="page" id="p1"></div>
+<div class="page" id="p2"></div>
+<div class="page" id="p3"></div>
+</div>
+<div id="bar"><div class="t" id="tot">$ 0</div><button class="btn" id="goBtn" onclick="openCo()">去結算</button></div>
+<div id="tabs">
+<button class="on" onclick="tab(0)"><span></span>收銀台</button>
+<button onclick="tab(1)"><span></span>訂單</button>
+<button onclick="tab(2)"><span></span>商品管理</button>
+<button onclick="tab(3)"><span></span>設定</button>
+</div>
+<div class="mask" id="co_m"><div class="sheet" id="co"></div></div>
+<div class="mask" id="md_m" onclick="if(event.target===this)closeM()"><div class="sheet" id="md"></div></div>
+<div id="ask"></div>
+<div class="ovl" id="ied"></div>
+<div class="ovl" id="login"><div class="lb"><h1>收銀機</h1><div class="sub" style="text-align:center;margin:0 0 6px">登入後資料會同步到手機與平板</div><input id="lg_e" type="email" placeholder="電子信箱" autocapitalize="off" autocomplete="username"><input id="lg_p" type="password" placeholder="密碼（至少 6 碼）" autocomplete="current-password"><div id="lg_m" class="sub" style="text-align:center;min-height:18px;color:var(--red)"></div><button class="btn" onclick="doLogin('in')">登入</button><button class="btn o" onclick="doLogin('up')">註冊新帳號</button><button class="lnk" style="color:var(--sub);font-size:13px;margin-top:4px" onclick="$('#login').classList.remove('on')">先用本機模式（不同步）</button></div></div><div class="toast" id="toast"></div>
+<script>
+/* ===== Supabase 設定：把下面兩行填上你的 Project URL 與 anon(publishable) key ===== */
+const SB_URL='https://ucdvzvtxmzlwwmgsnaco.supabase.co',SB_KEY='sb_publishable_qGi2ddqAR47vGnoCFdn7kw_Xrk0cJB2';
+const LOGO='logo.png'; /* 首頁左上角的 logo 圖片檔名 */
+/* ======================================================================== */
+const KEY='doujin_pos_v1';
+let S={events:[{id:1,name:'第一場同人展'}],cur:1,seq:1,products:[
+{id:1,name:'壓克力立牌',price:80,stock:20,img:''},{id:2,name:'明信片',price:30,stock:50,img:''},{id:3,name:'小誌',price:150,stock:15,img:''}],
+orders:[],rules:{full:[],buy:[]},nid:10};
+try{const r=localStorage.getItem(KEY);if(r)S=JSON.parse(r)}catch(e){}
+S.customers=S.customers||[];S.groups=S.groups||[];S.works=S.works||[];
+const migOrders=()=>S.orders.forEach(o=>{if(o.type=='pre'&&o.status=='已完成')o.status='已取貨'});migOrders();
+S.set=Object.assign({color:'',lang:'zh'},S.set);if(S.set.color=='#E0B85A')S.set.color='';
+const lsave=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('儲存空間不足（圖片太大？）')}};
+const save=()=>{lsave();qstate()};
+/* ---- sync (Supabase) ---- */
+const QK=KEY+'_q';let Q=[];try{Q=JSON.parse(localStorage.getItem(QK)||'[]')}catch(e){}
+let sb=null,USER=null,chan=null,flushing=false,ft=null,pt=null,PR=false,SYNERR=false;
+const saveQ=()=>{try{localStorage.setItem(QK,JSON.stringify(Q))}catch(e){}};
+function setSync(){const el=document.getElementById('syn');if(!el)return;el.textContent=!USER?'未登入':!navigator.onLine?'離線，恢復網路後自動同步':SYNERR?'同步失敗，稍後自動重試':Q.length?'同步中…（'+Q.length+'）':'已同步'}
+function qpush(op){if(!SB_URL)return;Q.push(op);saveQ();setSync();flushSoon()}
+function qstate(){if(!SB_URL)return;if(!Q.some(q=>q.t=='state')){Q.push({t:'state'});saveQ()}setSync();flushSoon()}
+const qo=id=>qpush({t:'o',id}),qod=id=>qpush({t:'od',id}),qoev=ev=>qpush({t:'oev',ev});
+function qreset(){Q=[{t:'reset'},{t:'state'},...S.orders.map(o=>({t:'o',id:o.id}))];saveQ();flushSoon()}
+function flushSoon(){clearTimeout(ft);ft=setTimeout(flush,500)}
+const stateData=()=>({events:S.events,products:S.products,groups:S.groups,works:S.works,rules:S.rules,nid:S.nid});
+async function upImg(blob){const path=USER.id+'/'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'.jpg';const r=await sb.storage.from('product-images').upload(path,blob,{contentType:'image/jpeg',cacheControl:'31536000'});if(r.error)throw r.error;return sb.storage.from('product-images').getPublicUrl(path).data.publicUrl}
+async function migrateImgs(){for(const p of S.products){if(p.img&&p.img.startsWith('data:')){try{const b=await (await fetch(p.img)).blob();p.img=await upImg(b);lsave()}catch(e){}}}}
+async function flush(){if(!sb||!USER||flushing||!navigator.onLine){setSync();return}flushing=true;
+try{while(Q.length){const op=Q[0];let r=null;
+if(op.t=='state'){await migrateImgs();r=await sb.from('pos_state').upsert({user_id:USER.id,data:stateData(),updated_at:new Date().toISOString()})}
+else if(op.t=='o'){const o=S.orders.find(x=>x.id==op.id);if(o)r=await sb.from('pos_orders').upsert({user_id:USER.id,id:o.id,ev:o.ev,data:o,updated_at:new Date().toISOString()})}
+else if(op.t=='od')r=await sb.from('pos_orders').delete().eq('user_id',USER.id).eq('id',op.id);
+else if(op.t=='oev')r=await sb.from('pos_orders').delete().eq('user_id',USER.id).eq('ev',op.ev);
+else if(op.t=='reset')r=await sb.from('pos_orders').delete().eq('user_id',USER.id);
+if(r&&r.error)throw r.error;Q.shift();saveQ()}
+SYNERR=false}catch(e){SYNERR=true;setTimeout(flush,15000)}
+flushing=false;setSync()}
+function applyRemote(d,rows){const cur=S.cur;S.events=d.events&&d.events.length?d.events:S.events;S.products=d.products||[];S.groups=d.groups||[];S.works=d.works||S.works||[];S.rules=d.rules||{full:[],buy:[]};S.nid=Math.max(S.nid||10,d.nid||10);S.orders=rows.map(r=>r.data).sort((a,b)=>b.time-a.time);migOrders();if(!S.events.some(e=>e.id==cur))S.cur=S.events[0].id;Object.keys(cart).forEach(id=>{if(!P(id)){delete cart[id];delete gift[id]}});lsave()}
+async function pull(){if(!sb||!USER||Q.length||flushing)return;
+try{const [a,b]=await Promise.all([sb.from('pos_state').select('data').maybeSingle(),sb.from('pos_orders').select('data')]);if(a.error||b.error)throw 0;
+if(!a.data){Q.push({t:'state'});S.orders.forEach(o=>Q.push({t:'o',id:o.id}));saveQ();flush();return}
+if(Q.length)return;applyRemote(a.data.data,b.data);
+const busy=['#md_m','#co_m','#ied'].some(x=>document.querySelector(x).classList.contains('on'));if(busy)PR=true;else render();setSync()}catch(e){SYNERR=true;setSync()}}
+function pullSoon(){clearTimeout(pt);pt=setTimeout(pull,600)}
+function subscribe(){if(chan||!sb)return;chan=sb.channel('pos-'+USER.id).on('postgres_changes',{event:'*',schema:'public',table:'pos_state'},pullSoon).on('postgres_changes',{event:'*',schema:'public',table:'pos_orders'},pullSoon).subscribe()}
+async function startSync(){setSync();await flush();await pull();subscribe();setSync()}
+async function initSB(){if(!SB_URL||!SB_KEY||!window.supabase)return;
+sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
+try{const {data}=await sb.auth.getSession();if(data.session){USER=data.session.user;startSync()}else $('#login').classList.add('on')}catch(e){}
+sb.auth.onAuthStateChange((ev)=>{if(ev=='SIGNED_OUT'){USER=null;if(chan){sb.removeChannel(chan);chan=null}setSync();if(cur==3)r3()}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&USER){flush().then(pull)}});
+window.addEventListener('online',()=>{if(USER)flush().then(pull)})}
+async function doLogin(mode){const e=$('#lg_e').value.trim(),p=$('#lg_p').value,m=$('#lg_m');if(!e||p.length<6){m.textContent='請輸入信箱與至少 6 碼密碼';return}
+m.style.color='var(--sub)';m.textContent='處理中…';
+try{const r=mode=='up'?await sb.auth.signUp({email:e,password:p}):await sb.auth.signInWithPassword({email:e,password:p});
+if(r.error){m.style.color='var(--red)';m.textContent=r.error.message;return}
+if(!r.data.session){m.textContent='註冊成功，請到信箱點驗證連結後再登入';return}
+USER=r.data.session.user;$('#login').classList.remove('on');startSync();if(cur==3)r3()}catch(x){m.style.color='var(--red)';m.textContent='連線失敗，請檢查網路'}}
+async function doLogout(){if(!await ask('確認登出？'))return;await sb.auth.signOut();USER=null;if(chan){sb.removeChannel(chan);chan=null}r3()}
+function loginOpen(){$('#login').classList.add('on')}
+function accHtml(){if(!SB_URL)return'<div class="li"><span class="sub" style="margin:0">尚未設定 Supabase，資料只存在這台裝置</span></div>';
+if(!USER)return`<div class="li" onclick="loginOpen()"><span>登入以同步資料</span>${I.chev}</div>`;
+return`<div class="li"><span class="sub" style="margin:0">帳號</span><span style="font-size:14px">${esc(USER.email||'')}</span></div><div class="li"><span class="sub" style="margin:0">同步狀態</span><span id="syn" style="font-size:14px"></span></div><div class="li" onclick="flush().then(pull)"><span>立即同步</span>${I.chev}</div><div class="li" onclick="doLogout()"><span style="color:var(--red)">登出</span></div>`}
+let cart={},gift={},disc=0,recv='',cur=0,filter='all';
+const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const P=id=>S.products.find(p=>p.id==id);
+const ucost=p=>p.cost!==''&&p.cost!=null?+p.cost:(p.combo?p.combo.reduce((a,c)=>{const x=P(c.pid);return a+(x?ucost(x):0)*c.q},0):0);
+const oc=o=>o.items.reduce((a,i)=>a+(i.cost!=null?i.cost:(P(i.pid)?ucost(P(i.pid)):0))*i.qty,0);
+const rcv=o=>o.total===0?0:(o.recv??o.total);
+const giftName=r=>r.gid&&P(r.gid)?P(r.gid).name:(r.text||'（未選擇）');
+const normU=u=>{u=(u||'').trim();if(!u)return'';if(/^https?:\/\//i.test(u))return u;if(/^[\w-]+(\.[\w-]+)+(\/|$)/.test(u))return'https://'+u;return''};
+function favErr(el,h){if(!el.dataset.t){el.dataset.t=1;el.src='https://icons.duckduckgo.com/ip3/'+h+'.ico';return}const i=document.createElement('i');i.className='bi';i.style.background='#8c8c91';i.innerHTML=I.link;el.replaceWith(i)}
+function linkH(u){const n=normU(u);if(!u)return'—';if(!n)return`<span class="lk"><i class="bi" style="background:#8c8c91">${I.link}</i><span>${esc(u)}</span></span>`;
+let h='',d=n;try{const U=new URL(n);h=U.hostname;d=h.replace(/^www\./,'')+(U.pathname!='/'?U.pathname:'')}catch(e){}
+return`<a class="lk" href="${esc(n)}" target="_blank" rel="noopener"><img class="bi" src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(h)}&sz=64" alt="" onerror="favErr(this,'${esc(h)}')"><span>${esc(d)}</span></a>`}
+function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',1800)}
+function tab(i){if(i!=3)EVR=null;cur=i;document.querySelectorAll('.page').forEach((p,j)=>p.classList.toggle('on',j==i));document.querySelectorAll('#tabs button').forEach((b,j)=>b.classList.toggle('on',j==i));$('#bar').style.display=i==0?'flex':'none';render()}
+function lgErr(el){el.replaceWith(document.createElement('span'))}
+const evName=()=>(S.events.find(e=>e.id==S.cur)||{}).name||'';
+const sub=()=>Object.entries(cart).reduce((a,[id,q])=>a+(gift[id]?0:P(id).price*q),0);
+const cnt=()=>Object.values(cart).reduce((a,b)=>a+b,0);
+const total=()=>Math.max(0,sub()-disc);
+function upd0(){document.querySelectorAll('#p0 .card[data-id]').forEach(c=>{const id=c.dataset.id,q=cart[id]||0;c.classList.toggle('in',!!q);const w=c.querySelector('.imw');w.querySelectorAll('.minus,.qb').forEach(x=>x.remove());if(q)w.insertAdjacentHTML('beforeend',`<button class="minus" onclick="event.stopPropagation();sub1(${id})">−</button><span class="qb">${q}</span>`)})}
+function upd(){if(cur==0)upd0();else render();bar()}
+function render(){[r0,r1,r2,r3][cur]();bar()}
+function bar(){$('#tot').textContent='$ '+total();$('#goBtn').textContent='去結算 ('+cnt()+'件)';$('#goBtn').disabled=!cnt()}
+function r0(){
+$('#p0').innerHTML=`<div class="top"><img class="logo" src="${LOGO}" alt="" onerror="lgErr(this)"><div style="position:relative"><button class="evb" onclick="event.stopPropagation();$('#em').classList.toggle('on')"><span>${esc(evName())}</span>${I.tri}</button><div id="em" class="dm" onclick="event.stopPropagation()"><div class="cap0">切換場次</div>${S.events.map(e=>`<div class="mi" onclick="S.cur=${e.id};save();render()"><span>${esc(e.name)}</span>${e.id==S.cur?`<span class="ck">${I.check}</span>`:''}</div>`).join('')}</div></div></div>
+${S.groups.length?`<div class="chips">${['',...S.groups].map((g,i)=>`<button class="chip ${g==CG?'on':''}" onclick="CG=${i?`S.groups[${i-1}]`:"''"};r0()">${i?esc(g):'全部'}</button>`).join('')}</div>`:''}<div class="grid">${S.products.filter(p=>p.hide!==true&&(!CG||p.group==CG)).map(p=>{const q=cart[p.id]||0,out=(p.stock!=null&&p.stock<=0)||p.off;
+return `<div class="card ${q?'in':''}" data-id="${p.id}" ${out?'style="opacity:.55"':''} onclick="add(${p.id})"><div class="imw"><div class="im" style="${p.img?`background-image:url(${p.img})`:''}">${p.img?'':I.gift}</div>
+${p.off?'<div class="stk z">已下架</div>':p.stock!=null?`<div class="stk ${out?'z':''}">${out?'售罄':p.stock}</div>`:''}
+${q?`<button class="minus" onclick="event.stopPropagation();sub1(${p.id})">−</button><span class="qb">${q}</span>`:''}</div>
+<div class="nm">${esc(p.name)}</div><div class="pr">$ ${p.price}</div></div>`}).join('')||'<div class="empty">到「商品管理」新增商品</div>'}</div>`}
+const used=pid=>Object.entries(cart).reduce((a,[id,q])=>{const p=P(id);if(!p)return a;if(p.combo)return a+q*((p.combo.find(c=>c.pid==pid)||{q:0}).q);return a+(id==pid?q:0)},0);
+function add(id){const p=P(id);if(p.off){toast('此商品已下架');return}cart[id]=(cart[id]||0)+1;const cs=p.combo?p.combo.map(c=>c.pid):[id];if(cs.some(pid=>{const x=P(pid);return x&&x.stock!=null&&used(pid)>x.stock})){if(--cart[id]<=0)delete cart[id];toast('庫存不足');return}upd()}
+function sub1(id){if(--cart[id]<=0){delete cart[id];delete gift[id]}upd()}
+/* checkout */
+function reminders(){const t=total(),out=[];
+S.rules.full.filter(r=>t>=r.amt).forEach(r=>out.push({txt:`滿 $${r.amt}`,r}));
+S.rules.buy.filter(r=>!r.pid||cart[r.pid]).forEach(r=>out.push({txt:'消費禮'+(r.pid&&P(r.pid)?`（購買${P(r.pid).name}）`:''),r}));
+return out}
+function openCo(){if(!cnt())return;recv='';coR();$('#co_m').classList.add('on')}
+function coR(){const t=total();if(t===0)recv='';const rc=recv===''?t:+recv,ch=rc-t;
+$('#co').innerHTML=`<div id="coItems"><div class="cg">${Object.entries(cart).map(([id,q])=>{const p=P(id);return `<div class="sw ci3"><button class="del" onclick="delItem(${id})">刪除</button><div class="in"><div class="tn3" style="${p.img?`background-image:url(${p.img})`:''}">${p.img?'':I.gift}</div>
+<div class="mid"><div class="n2">${esc(p.name)}</div>${p.work?`<div style="margin:5px 0 0"><span class="pill s">${esc(p.work)}</span></div>`:''}<label class="gl"><input type="checkbox" ${gift[id]?'checked':''} onchange="gift[${id}]=this.checked;coR();bar()">送人</label></div>
+<div class="rt"><b>${gift[id]?'送':'$'+p.price*q}</b><span class="q"><button onclick="sub1c(${id})">−</button>${q}<button onclick="addc(${id})">+</button></span></div></div></div>`}).join('')}</div>
+${reminders().map(x=>`<div class="rm row"><span>${I.gift} ${esc(x.txt)}：${esc(giftName(x.r))}</span>${x.r.gid&&P(x.r.gid)?`<button class="lnk" onclick="addc(${x.r.gid})">加入</button>`:''}</div>`).join('')}</div>
+<div class="pay"><div class="row lf"><span>手動優惠 $</span><input type="number" inputmode="numeric" style="width:100px;text-align:left" value="${disc||''}" placeholder="0" onchange="disc=Math.max(0,+this.value||0);coR();bar()"></div>
+<div class="row lf"><b>應收金額</b><span class="big">$ ${t}</span></div>
+<div class="row2"><div><span>支付</span><b>${recv===''?(t===0?'$ 0':''):'$ '+recv}</b></div><div><span>找錢</span><b style="color:${ch<0?'var(--red)':'var(--tx)'}">${recv===''?(t===0?'$ 0':''):'$ '+ch}</b></div></div></div>
+<div class="keys">${[7,8,9,4,5,6,1,2,3,0,'00','⌫'].map(k=>`<button onclick="key('${k}')">${k}</button>`).join('')}
+<button class="k2" onclick="recv='';coR()">清除</button><button class="k2" onclick="recv=''+total();coR()">剛好</button><button class="k2" onclick="preo()">存為預購</button></div>
+<div class="cob"><button class="btn o" onclick="$('#co_m').classList.remove('on')">返回</button><button class="btn ${recv!==''&&ch<0?'dis':''}" ${t>0&&recv===''?'disabled':''} onclick="${recv!==''&&ch<0?`alertM('支付金額不足，還差 $${-ch}')`:`finish('sale')`}">完成結帳</button></div>`;swipe('#coItems ')}
+function delItem(id){ask('確認刪除此品項？').then(ok=>{if(!ok)return;delete cart[id];delete gift[id];if(!cnt()){$('#co_m').classList.remove('on');render();return}render();coR()})}
+function addc(id){add(id);coR()}function sub1c(id){sub1(id);if(!cnt()){$('#co_m').classList.remove('on');return}coR()}
+function key(k){if(total()===0)return;if(k==='⌫')recv=recv.slice(0,-1);else{if(recv===''&&(k==='0'||k==='00'))return;recv+=k;if(recv.length>7)recv=recv.slice(0,7)}coR()}
+function preo(){openM(`<h3>預購（準備中）</h3><p class="sub">會先扣庫存，之後到訂單頁更新狀態。</p><div class="sub" style="margin:12px 0 6px">暱稱</div><input id="pn" placeholder="暱稱"><div class="sub" style="margin:12px 0 6px">社群連結</div><input id="plk" placeholder="例如 https://www.plurk.com/xxx" inputmode="url" autocapitalize="off" autocomplete="off"><br><br><button class="btn" style="width:100%" onclick="finish('pre',$('#pn').value.trim(),0,$('#plk').value.trim())">確認預購</button>`)}
+function alertM(m){const d=$('#ask');d.innerHTML=`<div class="ab"><p>${esc(m)}</p><div><button class="p2" id="aok" style="background:var(--ac);color:#fff">知道了</button></div></div>`;d.classList.add('on');$('#aok').onclick=()=>d.classList.remove('on')}
+function finish(type,note,cust,link){const t=total(),items=Object.entries(cart).map(([id,q])=>({pid:+id,name:P(id).name,price:P(id).price,qty:q,gift:!!gift[id],cost:ucost(P(id))})),rw=reminders().map(x=>x.txt+'：'+giftName(x.r));
+items.forEach(i=>{const p=P(i.pid);(p.combo||[{pid:i.pid,q:1}]).forEach(c=>{const x=P(c.pid);if(x&&x.stock!=null)x.stock=Math.max(0,x.stock-i.qty*c.q)})});
+const no=String(S.nid++).padStart(3,'0').slice(-3),rc=t===0?0:(recv===''?t:+recv),oid=Date.now();
+S.orders.unshift({id:oid,ev:S.cur,no,time:oid,items,disc,total:t,recv:rc,type,status:type=='pre'?'準備中':'完成',note:note||'',link:link||'',rw,cust:cust||0});
+save();qo(oid);cart={};gift={};disc=0;recv='';closeM();$('#co_m').classList.remove('on');toast(type=='pre'?'已建立預購':'結帳完成 找零 $'+Math.max(0,rc-t));render()}
+/* orders */
+const fmt=t=>{const d=new Date(t);return d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
+let OEV=null;
+const pills=o=>{const a=[],rw=o.rw||[];a.push(o.type=='pre'?`<span class="pill ${o.status=='準備中'?'p':o.status=='待取貨'?'q':''}">${o.status}</span>`:'<span class="pill s">已完成</span>');if(rw.some(x=>x.startsWith('消費禮')))a.push('<span class="pill gf">含消費禮</span>');if(rw.some(x=>x.startsWith('滿')))a.push('<span class="pill gf">含滿額禮</span>');return a.join('')};
+function r1(){const ev=OEV==null?S.cur:OEV,ck=`<span class="ck">${I.check}</span>`;
+const os=S.orders.filter(o=>ev=='all'||o.ev==ev),live=os.filter(o=>o.status!='已取消'),sales=live.reduce((a,o)=>a+o.total,0),cost=live.reduce((a,o)=>a+oc(o),0);
+const en=ev=='all'?'全部場次':((S.events.find(e=>e.id==ev)||{}).name||'');
+const fl=[['all','全部'],['sale','已完成'],['準備中','準備中'],['待取貨','待取貨'],['已取貨','已取貨']];
+const vis=os.filter(o=>filter=='all'||(filter=='sale'?o.type=='sale':o.type=='pre'&&o.status==filter));
+$('#p1').innerHTML=`<div class="ph"><h1 style="text-align:left;flex:1">訂單</h1><div style="position:relative"><button class="evb" onclick="event.stopPropagation();$('#om').classList.toggle('on')"><span>${esc(ev=='all'?'全部':en)}</span>${I.tri}</button><div id="om" class="dm" onclick="event.stopPropagation()"><div class="cap0">檢視場次</div><div class="mi" onclick="OEV='all';r1()"><span>全部</span>${ev=='all'?ck:''}</div>${S.events.map(e=>`<div class="mi" onclick="OEV=${e.id};r1()"><span>${esc(e.name)}</span>${ev==e.id?ck:''}</div>`).join('')}</div></div></div>
+<div class="sub" style="margin:-4px 0 12px">${esc(en)}｜${os.length} 筆｜銷售總額 $${sales}｜淨利 $${sales-cost}</div>
+<div class="chips">${fl.map(f=>`<button class="chip ${filter==f[0]?'on':''}" onclick="filter='${f[0]}';r1()">${f[1]}</button>`).join('')}</div>
+${vis.map(o=>`<div class="sw" data-id="${o.id}"><button class="del" onclick="delO(${o.id})">刪除</button><div class="in" onclick="detail(${o.id})">
+<div class="row"><span class="ot"><b>#${o.no}</b>${pills(o)}</span><b style="font-size:16px;flex:none;margin-left:8px">$ ${o.total}</b></div>
+<div class="sub">${fmt(o.time)}　${o.items.reduce((a,i)=>a+i.qty,0)} 件商品${rcv(o)>o.total?'｜找零 $'+(rcv(o)-o.total):''}${o.note?'｜'+esc(o.note):''}</div></div></div>`).join('')||'<div class="empty">還沒有紀錄</div>'}`;swipe()}
+function swipe(r){document.querySelectorAll((r||'')+'.sw').forEach(el=>{let x0=null,moved=false,wasOpen=false;
+el.addEventListener('pointerdown',e=>{x0=e.clientX;moved=false;wasOpen=el.classList.contains('open')});
+el.addEventListener('pointermove',e=>{if(x0===null)return;const dx=e.clientX-x0;if(Math.abs(dx)>20)moved=true;if(dx<-40){document.querySelectorAll('.sw.open').forEach(s=>s!==el&&s.classList.remove('open'));el.classList.add('open');x0=null}else if(dx>40){el.classList.remove('open');x0=null}});
+el.addEventListener('pointerup',()=>x0=null);el.addEventListener('pointercancel',()=>x0=null);
+el.addEventListener('click',e=>{if(moved){e.stopPropagation();e.preventDefault();return}if(wasOpen&&e.target.closest('.in')){e.stopPropagation();e.preventDefault();el.classList.remove('open')}},true)})}
+function delO(id){S.orders=S.orders.filter(o=>o.id!=id);save();qod(id);r1();toast('已刪除（庫存不會還原）')}
+function detail(id){const o=S.orders.find(x=>x.id==id);if(!o)return;
+const nxt={'準備中':'待取貨','待取貨':'已取貨'}[o.status],prv={'待取貨':'準備中','已取貨':'待取貨'}[o.status],rv=rcv(o);
+openM(`<h3>#${o.no}　${o.type=='pre'?o.status:'已完成'}</h3><div class="sub">${fmt(o.time)}</div>
+${o.type=='pre'?`<div class="grp" style="padding:2px 16px;margin-top:10px"><div class="li"><span class="sub" style="margin:0">暱稱</span><span>${esc(o.note||'—')}</span></div><div class="li"><span class="sub" style="margin:0">社群</span>${linkH(o.link)}</div></div>`:''}
+<div class="list" style="margin-top:10px">
+${o.items.map(i=>`<div class="li"><span>${esc(i.name)} ×${i.qty}${i.gift?' '+I.gift+'送人':''}</span><span>${i.gift?'$0':'$'+i.price*i.qty}</span></div>`).join('')}
+${o.disc?`<div class="li"><span>手動優惠</span><span>−$${o.disc}</span></div>`:''}
+<div class="li"><b>已收</b><b>$${rv}</b></div>${rv>o.total?`<div class="li"><span>找零</span><span>$${rv-o.total}</span></div>`:''}</div>
+${o.rw&&o.rw.length?`<div class="rm" style="margin-bottom:10px">${o.rw.map(x=>I.gift+' '+esc(x)).join('<br>')}</div>`:''}
+${nxt?`<div class="row" style="gap:10px">${prv?`<button class="btn o" style="flex:1" onclick="setSt(${o.id},'${prv}')">更改為【${prv}】</button>`:''}<button class="btn" style="flex:1" onclick="setSt(${o.id},'${nxt}')">更新為「${nxt}」</button></div>`:prv?`<button class="btn o" style="width:100%" onclick="setSt(${o.id},'${prv}')">更改為【${prv}】</button>`:''}`)}
+function setSt(id,s){S.orders.find(o=>o.id==id).status=s;save();qo(id);closeM();r1()}
+/* settings */
+let PQ='',PG='list',PGF='',CG='';
+const fmt2=n=>String(Math.round(Number(n)));
+function pList(){const q=PQ.trim().toLowerCase(),ps=S.products.filter(p=>(!q||p.name.toLowerCase().includes(q))&&(!PGF||p.group==PGF));if(!ps.length)return'<div class="empty">還沒有商品</div>';
+const bg=p=>p.img?`background-image:url(${p.img})`:'';
+if(PG=='grid')return`<div class="grid" style="margin-top:12px">${ps.map((p,i)=>`<div class="card" onclick="prodEd(${p.id})"><div class="imw"><div class="im" style="${bg(p)}">${p.img?'':I.gift}</div><span class="hd gh" style="touch-action:none" onpointerdown="event.stopPropagation();gDrag(event,${i})" onclick="event.stopPropagation()">${I.menu}</span></div><div class="nm">${esc(p.name)}</div><div class="pr">$ ${fmt2(p.price)}</div></div>`).join('')}</div>`;
+return ps.map((p,i)=>`<div class="sw pw s2"><button class="cp2" onclick="prodCopy(${p.id})">複製</button><button class="del" onclick="delP(${p.id})">刪除</button><div class="in" onclick="prodEd(${p.id})"><div class="rw" style="gap:12px"><span class="tn" style="${bg(p)}">${p.img?'':I.gift}</span><span class="pn">${esc(p.name)}${p.off?' <span class="sub">（下架）</span>':''}${p.combo?`<br><span class="sub">set・${p.combo.length} 項</span>`:p.stock!=null?`<br><span class="sub">庫存: ${p.stock}</span>`:''}</span><span class="pp">$ ${fmt2(p.price)}</span><span class="hd" onpointerdown="event.stopPropagation();pDrag(event,${i})" onclick="event.stopPropagation()">${I.menu}</span></div></div></div>`).join('')}
+function r2(){$('#p2').innerHTML=`<div class="ph"><button class="dkb" onclick="grpM()">${I.filter}</button><h1>商品管理</h1><button class="rb" onclick="event.stopPropagation();$('#pm').classList.toggle('on')">${I.plus}</button><div id="pm" class="pm" onclick="event.stopPropagation()"><div class="mi2" onclick="$('#pm').classList.remove('on');prodEd(0)">${I.box}新增商品</div><div class="mi2" onclick="$('#pm').classList.remove('on');prodEd(0,1)">${I.layers}新增set</div></div></div>
+<div class="srch">${I.search}<input id="pq" placeholder="搜尋名稱" value="${esc(PQ)}" oninput="PQ=this.value;$('#pl').innerHTML=pList();swipe('#pl ')"></div>
+<div class="row" style="margin-bottom:12px;gap:10px"><div class="chips" style="margin:0;flex:1;min-width:0">${['',...S.groups].map((g,i)=>`<button class="chip ${g==PGF?'on':''}" onclick="PGF=${i?`S.groups[${i-1}]`:"''"};r2()">${i?esc(g):'全部'}</button>`).join('')}</div><button class="rb" style="background:var(--ln);border:0" onclick="PG=PG=='list'?'grid':'list';r2()">${PG=='list'?I.grid:I.list2}</button></div><div id="pl">${pList()}</div>`;swipe('#pl ')}
+function grpM(){openM(`<h3>管理分組</h3><div class="sub" style="margin:-6px 0 10px">按住左側圖示拖曳可調整順序</div><div class="grp">${S.groups.map((g,i)=>`<div class="li gr"><span class="hd" onpointerdown="grpDrag(event,${i})">${I.menu}</span><input value="${esc(g)}" onchange="grpRen(${i},this.value)"><button class="lnk" onclick="grpDel(${i})">刪除</button></div>`).join('')||'<div class="empty">還沒有分組</div>'}</div><br><div class="row" style="gap:8px"><input id="gn" placeholder="新分組名稱"><button class="p2" style="flex:none" onclick="grpAdd()">新增</button></div>`)}
+function grpDrag(e,i){e.preventDefault();const h=e.currentTarget;h.setPointerCapture(e.pointerId);const rows=[...document.querySelectorAll('#md .gr')],rc=rows.map(r=>r.getBoundingClientRect()),H=rc[i].height,y0=e.clientY;let to=i;const me=rows[i];me.style.transition='none';me.style.position='relative';me.style.zIndex=2;me.style.boxShadow='0 4px 14px rgba(0,0,0,.18)';
+h.onpointermove=ev=>{const dy=ev.clientY-y0,c=rc[i].top+H/2+dy;me.style.transform='translateY('+dy+'px)';to=0;rc.forEach((r,k)=>{if(k!=i&&r.top+r.height/2<c)to++});
+rows.forEach((r,k)=>{if(k==i)return;let t=0;if(k>i&&k<=to)t=-H;if(k<i&&k>=to)t=H;r.style.transform='translateY('+t+'px)'})};
+h.onpointerup=h.onpointercancel=()=>{h.onpointermove=null;if(to!=i){const g=S.groups.splice(i,1)[0];S.groups.splice(to,0,g);save();render()}grpM()}}
+function grpAdd(){const v=$('#gn').value.trim();if(v&&!S.groups.includes(v)){S.groups.push(v);save();render()}grpM()}
+function grpRen(i,v){v=v.trim();const o=S.groups[i];if(v&&!S.groups.includes(v)){S.groups[i]=v;S.products.forEach(p=>{if(p.group==o)p.group=v});if(CG==o)CG=v;if(PGF==o)PGF=v;save();render()}grpM()}
+function grpDel(i){const o=S.groups[i];S.groups.splice(i,1);S.products.forEach(p=>{if(p.group==o)p.group=''});if(CG==o)CG='';if(PGF==o)PGF='';save();render();grpM()}
+const tgl=(on,fn)=>`<button class="tg ${on?'on':''}" onclick="${fn}"></button>`;
+const rowC=(ic,col,t,fn,r='',nav=1)=>`<div class="li" onclick="${fn}"><span class="rw"><i class="bk">${I[ic]}</i>${t}</span><span class="rw" style="gap:6px">${r}${nav?I.chev:''}</span></div>`;
+const rowF=(ic,col,t,acc,fn)=>`<label class="li"><span class="rw"><i class="bk">${I[ic]}</i>${t}</span>${I.chev}<input type="file" accept="${acc}" hidden onchange="${fn}(this.files[0]);this.value=''"></label>`;
+function r3(){$('#p3').innerHTML=`<h1>設定</h1>
+<div class="sec">場次</div><div class="grp" id="evl" style="padding:0;overflow:hidden">${S.events.map(e=>`<div class="sw evr s2"><button class="cp2" onclick="evCopy(${e.id})">複製</button><button class="del" onclick="evDel(${e.id})">刪除</button><div class="in" ${e.id==EVR?'':`onclick="evRenStart(${e.id})"`}>${e.id==EVR?`<div class="row" style="gap:8px"><input id="evi" style="flex:1;min-width:0;padding:9px 12px;background:var(--bg)" value="${esc(e.name)}" onkeydown="if(event.key=='Enter')evRenOk(${e.id});if(event.key=='Escape')evRenCancel()"><button class="p2 sm" onclick="evRenCancel()">取消</button><button class="p2 sm" style="background:var(--ac);color:#fff" onclick="evRenOk(${e.id})">確認</button></div>`:`<div class="row"><span>${esc(e.name)}</span>${e.id==S.cur?`<span class="ck">${I.check}目前場次</span>`:''}</div>`}</div></div>`).join('')}
+<div class="li" style="padding:14px 16px"><button class="lnk" onclick="evAdd()">＋ 新增場次</button></div></div>
+<div class="sec">優惠設定</div><div class="grp">
+<div class="li"><b>滿額禮</b><button class="lnk" onclick="ruleEd('full',-1)">＋ 新增</button></div>
+${S.rules.full.map((r,i)=>`<div class="li" onclick="ruleEd('full',${i})"><span>滿 $${r.amt}　${esc(giftName(r))}</span>${I.chev}</div>`).join('')}
+<div class="li"><b>消費禮</b><button class="lnk" onclick="ruleEd('buy',-1)">＋ 新增</button></div>
+${S.rules.buy.map((r,i)=>`<div class="li" onclick="ruleEd('buy',${i})"><span>${r.pid&&P(r.pid)?'買 '+esc(P(r.pid).name):'任一消費'}　${esc(giftName(r))}</span>${I.chev}</div>`).join('')}</div>
+<div class="sec">一般</div><div class="grp">${rowC('palette','#5b5bd6','設定顏色','colorM()','<i style="width:26px;height:26px;border-radius:50%;background:var(--g);display:block"></i>')}</div>
+<div class="sec">資料匯入／匯出</div><div class="grp">
+${rowIO('全部資料','.json,application/json','impA','expA()')}
+${rowIO('商品資料','.csv,.txt,.json,text/csv,application/json','impP','expP()')}
+${rowIO('場次資料','.json,application/json','impE','expE()')}
+${rowIO('銷售資料','.json,application/json','impS','expS()')}
+</div>
+<div class="cap">商品資料可匯入 CSV（名稱,價格,庫存）或本 App 匯出的檔案，同名商品會更新。</div>
+<div class="sec">使用量</div><div class="grp">
+<div class="li"><span class="sub" style="margin:0">照片</span><span id="uph" style="font-size:14px">計算中…</span></div>
+<div class="li"><span class="sub" style="margin:0">資料</span><span id="udt" style="font-size:14px">計算中…</span></div>
+<div class="li"><span class="sub" style="margin:0">免費額度</span><span style="font-size:13px;color:var(--sub)">照片 1 GB・資料庫 500 MB</span></div>
+${USER?`<div class="li" onclick="doLogout()"><span style="color:var(--red)">登出</span></div>`:''}</div>`;swipe('#evl ');loadUsage()}
+function evCopy(id){const e=S.events.find(x=>x.id==id);S.events.push({id:Date.now(),name:e.name+' 複製'});save();r3();toast('已複製場次')}
+async function evDel(id){if(S.events.length<2)return toast('至少要留一個場次');if(!await ask('確認刪除？'))return;S.events=S.events.filter(e=>e.id!=id);S.orders=S.orders.filter(o=>o.ev!=id);if(S.cur==id)S.cur=S.events[0].id;save();qoev(id);render();toast('已刪除')}
+function ask(m,y){return new Promise(ok=>{const d=$('#ask');d.innerHTML=`<div class="ab"><p>${esc(m)}</p><div><button class="p2" id="ano">取消</button><button class="p2" id="ays" style="background:var(--red);color:#fff">${esc(y||'刪除')}</button></div></div>`;d.classList.add('on');const f=v=>{d.classList.remove('on');ok(v)};$('#ano').addEventListener('click',()=>f(false));$('#ays').addEventListener('click',()=>f(true))})}
+function evAdd(){openM(`<h3>新增場次</h3><input id="v1" placeholder="例如：CWT 冬季場"><br><br><button class="btn" style="width:100%" onclick="const n=$('#v1').value.trim();if(n){const id=Date.now();S.events.push({id,name:n});S.cur=id;save();closeM();r3()}">新增並切換</button>`)}
+let EVR=null;
+const r3k=()=>{const sc=$('#p3').scrollTop;r3();$('#p3').scrollTop=sc};
+function evRenStart(id){EVR=id;r3k();const i=$('#evi');if(i){i.focus();i.select()}}
+function evRenCancel(){EVR=null;r3k()}
+function evRenOk(id){const n=($('#evi').value||'').trim();if(n){S.events.find(e=>e.id==id).name=n;save()}EVR=null;r3k()}
+let RU=null;
+const pickH=(key,items,sel)=>`<div class="pk">${items.map(x=>`<div class="pki ${x.id==sel?'on':''}" onclick="pk(this,'${key}',${x.id})"><span>${esc(x.name)}</span>${x.id==sel?I.check:''}</div>`).join('')||'<div class="empty" style="padding:16px">先到商品管理新增商品</div>'}</div>`;
+function pk(el,key,id){RU[key]=id;[...el.parentNode.children].forEach(c=>{c.classList.remove('on');const ic=c.querySelector('.ic');if(ic)ic.remove()});el.classList.add('on');el.insertAdjacentHTML('beforeend',I.check)}
+function ruleEd(k,i){const r=i>=0?S.rules[k][i]:{};RU={k,i,amt:r.amt||'',gid:r.gid||0,pid:r.pid||0};TALL=1;ANI=1;
+openM(`<div class="sh row"><button class="p2" onclick="closeM()">取消</button><b style="font-size:17px">${i>=0?'編輯':'新增'}${k=='full'?'滿額禮':'消費禮'}</b><button class="p2" onclick="ruleSave()">保存</button></div><div class="sbody">
+${k=='full'?`<div class="sub" style="margin:0 0 6px">達到金額</div><div class="fld"><span class="sub">$</span><input type="number" inputmode="numeric" placeholder="例如 300" value="${esc(RU.amt)}" oninput="RU.amt=this.value"></div>`:`<div class="sub" style="margin:0 0 6px">購買商品</div>${pickH('pid',[{id:0,name:'任一消費'},...S.products],RU.pid)}`}
+<div class="sub" style="margin:16px 0 6px">贈送商品（從商品管理選擇）</div>${pickH('gid',S.products,RU.gid)}
+${i>=0?`<button class="btn o" style="width:100%;margin-top:16px;color:var(--red)" onclick="ruleDel()">刪除</button>`:''}</div>`)}
+function ruleSave(){const u=RU;if(!u.gid)return toast('請選擇贈送商品');const a=+u.amt;if(u.k=='full'&&!(a>0))return toast('請輸入金額');
+const r=u.k=='full'?{amt:a,gid:u.gid}:{pid:u.pid||0,gid:u.gid};if(u.i>=0)S.rules[u.k][u.i]=r;else S.rules[u.k].push(r);if(u.k=='full')S.rules.full.sort((x,y)=>x.amt-y.amt);save();closeM();r3()}
+async function ruleDel(){if(!await ask('確認刪除？'))return;S.rules[RU.k].splice(RU.i,1);save();closeM();r3()}
+let E={};
+function prodEd(id,cb){const p=id?P(id):{};E={id,name:p.name||'',price:p.price??'',stock:p.stock==null?'':p.stock,track:id?p.stock!=null:false,img:p.img||'',cost:p.cost??'',off:!!p.off,hide:!!p.hide,group:p.group||'',work:p.work||'',combo:id?(p.combo?p.combo.map(c=>({...c})):null):(cb?[]:null)};prodR()}
+const tg2=(on,fn,c)=>`<button class="tg ${on?'on':''}" style="--on:${c}" onclick="${fn}"></button>`;
+const comboCard=()=>`<div class="sec" style="margin-top:0">set內容</div><div class="grp">${E.combo.map((c,i)=>{const x=P(c.pid);return`<div class="li"><span>${x?esc(x.name):'（已刪除）'}</span><span class="q"><button onclick="cbQ(${i},-1)">−</button>${c.q}<button onclick="cbQ(${i},1)">+</button></span></div>`}).join('')}<div class="li" style="display:block"><div class="sub" style="margin:0 0 8px">點選加入商品</div><div class="chips wrap">${S.products.filter(x=>!x.combo&&x.id!=E.id).map(x=>`<button class="chip" onclick="cbAdd(${x.id})">＋ ${esc(x.name)}</button>`).join('')||'<span class="sub">沒有可加入的單品</span>'}</div></div></div>`;
+function cbAdd(v){if(!v)return;const c=E.combo.find(x=>x.pid==v);if(c)c.q++;else E.combo.push({pid:+v,q:1});prodR()}
+function cbQ(i,d){E.combo[i].q+=d;if(E.combo[i].q<=0)E.combo.splice(i,1);prodR()}
+function workPick(i){E.addW=0;E.work=i<0?'':S.works[i];prodR()}
+function workNew(){E.addW=1;prodR();setTimeout(()=>{const g=$('#wnew');g&&g.focus()},60)}
+function workOk(){const n=($('#wnew').value||'').trim();if(!n)return toast('請輸入作品名稱');if(!S.works.includes(n))S.works.push(n);E.work=n;E.addW=0;save();prodR()}
+function workM(){openM(`<h3>管理作品</h3><div class="grp">${S.works.map((w,i)=>`<div class="li gr"><input value="${esc(w)}" onchange="workRen(${i},this.value)"><button class="lnk" onclick="workDel(${i})">刪除</button></div>`).join('')||'<div class="empty">還沒有作品</div>'}</div><br><button class="btn" style="width:100%" onclick="prodR()">完成</button>`)}
+function workRen(i,v){v=v.trim();const o=S.works[i];if(v&&!S.works.includes(v)){S.works[i]=v;S.products.forEach(p=>{if(p.work==o)p.work=v});if(E.work==o)E.work=v;save()}}
+function workDel(i){const o=S.works[i];S.works.splice(i,1);S.products.forEach(p=>{if(p.work==o)p.work=''});if(E.work==o)E.work='';save();workM()}
+function grpPick(i){E.addG=0;E.group=i<0?'':S.groups[i];prodR()}
+function grpSel(v){if(v=='+new'){E.addG=1;prodR();setTimeout(()=>{const g=$('#gnew');g&&g.focus()},60);return}E.addG=0;E.group=v}
+function grpOk(){const n=($('#gnew').value||'').trim();if(!n)return toast('請輸入分組名稱');if(!S.groups.includes(n))S.groups.push(n);E.group=n;E.addG=0;save();render();prodR()}
+function prodR(){const e=E,id=e.id,cb=!!e.combo,ic=(n,c)=>`<i class="bk t" style="--c:${c}">${I[n]}</i>`;
+const old=document.querySelector('#md .sbody'),st=old?old.scrollTop:0;TALL=1;openM(`<div class="sh row"><button class="p2" onclick="closeM()">取消</button><b style="font-size:17px">${id?'編輯':'新增'}${cb?'set':'商品'}</b><button class="p2" onclick="prodSave(${id||0})">保存</button></div><div class="sbody">
+<div class="row" style="align-items:flex-start;gap:14px;margin-bottom:16px"><label class="imgb" style="${e.img?`background-image:url(${e.img})`:''}">${e.img?'':I.image}<input type="file" accept="image/*" hidden onchange="pimg(this)"></label>
+<div style="flex:1;display:grid;gap:8px"><div class="sub" style="margin:0">${cb?'set名稱':'商品名稱'}</div><div class="fld"><input placeholder="${cb?'例如：壓克力＋明信片':'例如：壓克力'}" value="${esc(e.name)}" oninput="E.name=this.value"></div><div class="fld"><span class="sub">$</span><input type="number" inputmode="numeric" placeholder="0" value="${esc(e.price)}" oninput="E.price=this.value"></div></div></div>
+<div class="row" style="gap:8px;margin:-4px 0 10px;justify-content:flex-start"><button class="p2" ${e.img?'':'disabled style="opacity:.4"'} onclick="imgEdit()">調整圖片</button><button class="p2" ${e.img?'':'disabled style="opacity:.4"'} onclick="E.img='';prodR()">移除圖片</button></div>
+<div class="fld" style="margin-bottom:16px"><span class="sub" style="display:flex">${I.image}</span><input id="pst" placeholder="貼上圖片" autocomplete="off" autocapitalize="off" onpaste="pasteImg(event)" oninput="this.value=''"></div>
+${cb?comboCard():''}
+<div class="grp">
+<div class="li"><span class="rw">${ic('reg','#2f2f33')}上架銷售</span>${tg2(!e.off,'E.off=!E.off;prodR()','#2f2f33')}</div>
+<div class="li"><span class="rw">${ic('eye','#2f2f33')}顯示商品</span>${tg2(!e.hide,'E.hide=!E.hide;prodR()','#2f2f33')}</div>
+<div class="li" style="display:block"><div class="row" style="margin-bottom:10px"><span class="rw">${ic('book','#2f2f33')}作品</span><button class="lnk" style="font-size:13px;color:var(--sub)" onclick="workM()">管理</button></div><div class="chips wrap"><button class="chip ${!e.work&&!e.addW?'on':''}" onclick="workPick(-1)">不選</button>${S.works.map((w,i)=>`<button class="chip ${e.work==w&&!e.addW?'on':''}" onclick="workPick(${i})">${esc(w)}</button>`).join('')}<button class="chip ${e.addW?'on':''}" onclick="workNew()">＋ 新增作品</button></div></div>
+${e.addW?`<div class="li"><input id="wnew" placeholder="新作品名稱"><button class="lnk" onclick="workOk()">新增</button></div>`:''}
+<div class="li" style="display:block"><div class="rw" style="margin-bottom:10px">${ic('folder','#2f2f33')}商品分組</div><div class="chips wrap"><button class="chip ${!e.group&&!e.addG?'on':''}" onclick="grpPick(-1)">不分組</button>${S.groups.map((g,i)=>`<button class="chip ${e.group==g&&!e.addG?'on':''}" onclick="grpPick(${i})">${esc(g)}</button>`).join('')}<button class="chip ${e.addG?'on':''}" onclick="grpSel('+new')">＋ 新增分組</button></div></div>
+${e.addG?`<div class="li"><input id="gnew" placeholder="新分組名稱"><button class="lnk" onclick="grpOk()">新增</button></div>`:''}
+${cb?'':`<div class="li"><span class="rw">${ic('box','#2f2f33')}管理庫存</span>${tg2(e.track,'E.track=!E.track;prodR()','#2f2f33')}</div>`}
+${!cb&&e.track?`<div class="li"><span class="rw">${ic('list','#2f2f33')}庫存數量</span><input type="number" inputmode="numeric" style="width:40%;text-align:right" placeholder="0" value="${esc(e.stock)}" oninput="E.stock=this.value"></div>`:''}
+<div class="li"><span class="rw">${ic('tag','#2f2f33')}單位成本</span><input type="number" inputmode="numeric" style="width:40%;text-align:right" placeholder="選填" value="${esc(e.cost)}" oninput="E.cost=this.value"></div></div>
+${id?`<button class="btn o" style="width:100%;margin-top:14px;color:var(--red)" onclick="delP(${id})">刪除${cb?'set':'商品'}</button>`:''}</div>`);const nb=document.querySelector('#md .sbody');if(nb)nb.scrollTop=st}
+function imgFile(f){if(!f)return;const r=new FileReader();r.onload=()=>imgOpen(r.result);r.onerror=()=>toast('圖片讀取失敗');r.readAsDataURL(f)}
+function pimg(inp){const f=inp.files[0];inp.value='';imgFile(f)}
+function imgEdit(){if(E.img)imgOpen(E.img)}
+function pasteImg(e){e.preventDefault();const cd=e.clipboardData;if(!cd)return;
+let f=[...(cd.files||[])].find(x=>x.type.startsWith('image/'));
+if(!f)for(const it of [...(cd.items||[])])if(it.kind=='file'&&it.type.startsWith('image/')){f=it.getAsFile();break}
+if(f){imgFile(f);return}
+const t=(cd.getData('text')||'').trim(),h=cd.getData('text/html')||'',m=h.match(/<img[^>]+src=["']([^"']+)["']/i);
+if(m){imgOpen(m[1].replace(/&amp;/g,'&'));return}
+if(/^https?:\/\//i.test(t)||/^data:image\//i.test(t))imgOpen(t);else toast('剪貼簿裡沒有圖片')}
+let IE=null;const IW=300,IH=400;
+function imgOpen(src){const im=new Image();if(/^https?:/i.test(src))im.crossOrigin='anonymous';
+im.onload=()=>{IE={im,z:1,q:0,f:0,x:0,y:0};ieR()};
+im.onerror=()=>{if(/^https?:/i.test(src)&&im.crossOrigin){const i2=new Image();i2.onload=()=>{E.img=src;prodR();toast('此圖片來源無法調整，已直接使用網址')};i2.onerror=()=>toast('圖片載入失敗');i2.src=src}else toast('圖片載入失敗')};im.src=src}
+const ieBase=()=>{const o=IE.q%2,w=o?IE.im.height:IE.im.width,h=o?IE.im.width:IE.im.height;return Math.max(IW/w,IH/h)};
+function ieDraw(cv,f){cv=cv||$('#iecv');f=f||1;const c=cv.getContext('2d'),m=IE.im,s=ieBase()*IE.z*f;c.save();c.fillStyle='#ebe8e3';c.fillRect(0,0,IW*f,IH*f);c.translate(IW*f/2+IE.x*f,IH*f/2+IE.y*f);c.rotate((IE.q*90+IE.f)*Math.PI/180);c.scale(s/1,s/1);c.drawImage(m,-m.width/2,-m.height/2);c.restore()}
+function ieR(){$('#ied').innerHTML=`<div class="row" style="padding:12px 16px"><button class="p2" onclick="ieClose()">取消</button><b style="font-size:17px">調整圖片</b><button class="p2" onclick="ieOk()">完成</button></div>
+<div class="iec"><canvas id="iecv" width="${IW}" height="${IH}"></canvas></div>
+<div class="iet"><label>縮放<input id="iez" type="range" min="0.3" max="4" step="0.01" value="${IE.z}" oninput="IE.z=+this.value;ieDraw()"></label>
+<label>微調角度<input id="ief" type="range" min="-45" max="45" step="1" value="${IE.f}" oninput="IE.f=+this.value;ieDraw()"></label>
+<div class="row" style="gap:8px"><button class="p2" style="flex:1" onclick="ieRot(-1)">↺ 左轉 90°</button><button class="p2" style="flex:1" onclick="ieRot(1)">↻ 右轉 90°</button><button class="p2" style="flex:1" onclick="IE.z=1;IE.x=IE.y=IE.f=0;ieR()">重置</button></div><div style="text-align:center">拖曳移動，雙指或滑桿縮放</div></div>`;
+$('#ied').classList.add('on');const cv=$('#iecv'),ps=new Map();let d0=0,z0=1;
+cv.onpointerdown=e=>{cv.setPointerCapture(e.pointerId);ps.set(e.pointerId,{x:e.clientX,y:e.clientY});if(ps.size==2){const[a,b]=[...ps.values()];d0=Math.hypot(a.x-b.x,a.y-b.y);z0=IE.z}};
+cv.onpointermove=e=>{const p=ps.get(e.pointerId);if(!p)return;const rx=IW/cv.getBoundingClientRect().width;if(ps.size==1){IE.x+=(e.clientX-p.x)*rx;IE.y+=(e.clientY-p.y)*rx}p.x=e.clientX;p.y=e.clientY;
+if(ps.size==2&&d0){const[a,b]=[...ps.values()];IE.z=Math.min(4,Math.max(.3,z0*Math.hypot(a.x-b.x,a.y-b.y)/d0));$('#iez').value=IE.z}ieDraw()};
+cv.onpointerup=cv.onpointercancel=e=>{ps.delete(e.pointerId);d0=0};
+cv.onwheel=e=>{e.preventDefault();IE.z=Math.min(4,Math.max(.3,IE.z*(e.deltaY<0?1.06:.94)));$('#iez').value=IE.z;ieDraw()};
+ieDraw()}
+function ieRot(d){IE.q=(IE.q+d+4)%4;IE.z=1;IE.x=IE.y=0;ieR()}
+function ieClose(){$('#ied').classList.remove('on');IE=null;if(PR){PR=false;render()}}
+async function ieOk(){toast('處理中…');const cv=document.createElement('canvas');cv.width=IW*2;cv.height=IH*2;ieDraw(cv,2);
+const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',.82));let url=null;
+if(sb&&USER&&navigator.onLine){try{url=await upImg(blob)}catch(e){}}
+if(!url)url=cv.toDataURL('image/jpeg',.72);E.img=url;ieClose();prodR()}
+function prodSave(id){const n=(E.name||'').trim(),pr=Math.round(+E.price);if(!n||E.price===''||!(pr>=0))return toast('請填名稱與價格');if(E.combo&&!E.combo.length)return toast('請加入set內容');const d={name:n,price:pr,stock:E.combo?null:E.track?(E.stock===''?0:+E.stock):null,img:E.img,cost:E.cost===''?'':Math.round(+E.cost),off:E.off,hide:E.hide,group:E.group,work:E.work,combo:E.combo||undefined};if(id)Object.assign(P(id),d);else S.products.push({id:Date.now(),...d});save();closeM();render()}
+function dragSort(e,i,rows,done){e.preventDefault();const h=e.currentTarget;h.setPointerCapture(e.pointerId);const rc=rows.map(r=>r.getBoundingClientRect()),H=rc[i].height,y0=e.clientY,me=rows[i];let to=i;
+rows.forEach(r=>r.style.transition='transform .12s');me.style.transition='none';me.style.zIndex=2;me.style.boxShadow='0 4px 14px rgba(0,0,0,.18)';
+h.onpointermove=ev=>{const dy=ev.clientY-y0,c=rc[i].top+H/2+dy;me.style.transform='translateY('+dy+'px)';to=0;rc.forEach((r,k)=>{if(k!=i&&r.top+r.height/2<c)to++});
+rows.forEach((r,k)=>{if(k==i)return;let t=0;if(k>i&&k<=to)t=-H;if(k<i&&k>=to)t=H;r.style.transform='translateY('+t+'px)'})};
+h.onpointerup=h.onpointercancel=()=>{h.onpointermove=null;done(i,to)}}
+const curPs=()=>{const q=PQ.trim().toLowerCase();return S.products.filter(p=>(!q||p.name.toLowerCase().includes(q))&&(!PGF||p.group==PGF))};
+function reorderP(ps,from,to){const ids=ps.map(p=>p.id),m=ids.splice(from,1)[0];ids.splice(to,0,m);const slots=[];S.products.forEach((p,k)=>{if(ps.includes(p))slots.push(k)});const byId={};ps.forEach(p=>byId[p.id]=p);const arr=S.products.slice();slots.forEach((k,n)=>{arr[k]=byId[ids[n]]});S.products=arr;save();render()}
+function pDrag(e,i){const ps=curPs();
+dragSort(e,i,[...document.querySelectorAll('#pl .pw')],(from,to)=>{if(from==to){r2();return}reorderP(ps,from,to)})}
+function gDrag(e,i){e.preventDefault();const ps=curPs(),h=e.currentTarget;h.setPointerCapture(e.pointerId);
+const cards=[...document.querySelectorAll('#pl .card')],rc=cards.map(c=>c.getBoundingClientRect()),me=cards[i],x0=e.clientX,y0=e.clientY;let to=i;
+me.style.transition='none';me.style.zIndex=5;me.style.position='relative';me.style.opacity='.9';
+cards.forEach((c,k)=>{if(k!=i)c.style.transition='transform .12s'});
+h.onpointermove=ev=>{const dx=ev.clientX-x0,dy=ev.clientY-y0;me.style.transform='translate('+dx+'px,'+dy+'px) scale(1.05)';
+const cx=rc[i].left+rc[i].width/2+dx,cy=rc[i].top+rc[i].height/2+dy;let best=1e9;rc.forEach((r,k)=>{const d=Math.hypot(r.left+r.width/2-cx,r.top+r.height/2-cy);if(d<best){best=d;to=k}});
+cards.forEach((c,k)=>{if(k==i)return;let src=k;if(k>i&&k<=to)src=k-1;else if(k<i&&k>=to)src=k+1;
+c.style.transform=src==k?'':'translate('+(rc[src].left-rc[k].left)+'px,'+(rc[src].top-rc[k].top)+'px)'})};
+h.onpointerup=h.onpointercancel=()=>{h.onpointermove=null;if(to==i){r2();return}reorderP(ps,i,to)}}
+function prodCopy(id){const i=S.products.findIndex(p=>p.id==id);if(i<0)return;const c=JSON.parse(JSON.stringify(S.products[i]));c.id=Date.now();c.name+=' 複製';S.products.splice(i+1,0,c);save();render();toast('已複製商品')}
+async function delP(id){if(await ask('確認刪除？'))rmP(id)}
+function rmP(id){S.products=S.products.filter(p=>p.id!=id);S.products.forEach(p=>{if(p.combo)p.combo=p.combo.filter(c=>c.pid!=id)});delete cart[id];delete gift[id];save();closeM();render()}
+let TALL=0,ANI=0;function openM(h){$('#md').className='sheet'+(TALL?' tall':'')+(ANI?' up':'');TALL=0;ANI=0;$('#md').innerHTML=h;$('#md_m').classList.add('on')}
+function closeM(){$('#md_m').classList.remove('on');if(PR){PR=false;render()}}
+/* ---- icons ---- */
+const sv=d=>'<svg class="ic" viewBox="0 0 24 24" fill-rule="evenodd"><path d="'+d+'"/></svg>';
+const I={
+reg:sv('M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm2 4v3h10V7H7zm0 5v2h3v-2H7zm5 0v2h3v-2h-3zm-5 3v2h3v-2H7zm5 0v2h3v-2h-3z'),
+list:sv('M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm1 9v2h10v-2H7zm0 4v2h7v-2H7z'),
+box:sv('M12 2 3 6.5v11L12 22l9-4.500v-11L12 2zm0 2.200 5.800 2.900L12 10 6.200 7.100 12 4.200zM5 8.800l6 3v7.400l-6-3V8.800z'),
+gear:sv('M19.140 12.940c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.030-1.580a.49.49 0 0 0 .12-.61l-1.920-3.320a.488.488 0 0 0-.59-.22l-2.390.96c-.5-.38-1.030-.7-1.620-.94l-.36-2.540a.484.484 0 0 0-.48-.41h-3.840c-.24 0-.43.17-.47.41l-.36 2.540c-.59.24-1.130.57-1.620.94l-2.390-.96c-.22-.08-.47 0-.59.22L2.740 8.870c-.12.21-.08.47.12.61l2.030 1.580c-.05.3-.09.63-.09.94s.02.64.07.94l-2.030 1.580a.49.49 0 0 0-.12.61l1.920 3.320c.12.22.37.29.59.22l2.390-.96c.5.38 1.030.7 1.620.94l.36 2.540c.05.24.24.41.48.41h3.840c.24 0 .44-.17.47-.41l.36-2.540c.59-.24 1.130-.56 1.620-.94l2.390.96c.22.08.47 0 .59-.22l1.920-3.320c.12-.22.07-.47-.12-.61l-2.010-1.580zM12 15.600c-1.980 0-3.600-1.620-3.600-3.600s1.620-3.600 3.600-3.600 3.600 1.620 3.600 3.600-1.620 3.600-3.600 3.600z'),
+gift:sv('M20 7h-2.200c.1-.3.2-.6.2-1a3 3 0 0 0-3-3c-1.300 0-2.400.7-3 1.800C11.400 3.700 10.300 3 9 3a3 3 0 0 0-3 3c0 .4.1.7.2 1H4a2 2 0 0 0-2 2v2h20V9a2 2 0 0 0-2-2zM9 5a1 1 0 0 1 1 1v1H9a1 1 0 0 1 0-2zm6 0a1 1 0 0 1 0 2h-1V6a1 1 0 0 1 1-1zM3 13v6a2 2 0 0 0 2 2h6v-8H3zm10 0v8h6a2 2 0 0 0 2-2v-6h-8z'),
+check:sv('M9 16.200 4.800 12l-1.400 1.400L9 19 21 7l-1.400-1.400L9 16.200z'),
+palette:sv('M12 2a10 10 0 1 0 0 20c1.100 0 2-.9 2-2 0-.5-.2-1-.5-1.300-.3-.3-.5-.7-.5-1.200 0-1 .9-1.500 2-1.500h2.300A3.700 3.700 0 0 0 21 12.300C21 6.700 17 2 12 2zM6.500 12a1.500 1.500 0 1 1 0-3 1.500 1.500 0 0 1 0 3zm3-4a1.500 1.500 0 1 1 0-3 1.500 1.500 0 0 1 0 3zm5 0a1.500 1.500 0 1 1 0-3 1.500 1.500 0 0 1 0 3zm3 4a1.500 1.500 0 1 1 0-3 1.500 1.500 0 0 1 0 3z'),
+refresh:sv('M17.650 6.350A8 8 0 1 0 19.740 14h-2.080A6 6 0 1 1 12 6c1.660 0 3.140.69 4.220 1.780L13 11h7V4l-2.350 2.350z'),
+globe:sv('M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.900 9h-3a15.700 15.700 0 0 0-1.400-6A8 8 0 0 1 18.900 11zM12 4c.8 1 1.800 3.200 2 7h-4c.2-3.800 1.200-6 2-7zM4.300 13h3a15.700 15.700 0 0 0 1.400 6A8 8 0 0 1 4.300 13zm3-2h-3a8 8 0 0 1 4.400-6 15.700 15.700 0 0 0-1.400 6zM12 20c-.8-1-1.800-3.200-2-7h4c-.2 3.800-1.200 6-2 7zm2.500-1a15.700 15.700 0 0 0 1.400-6h3a8 8 0 0 1-4.400 6z'),
+link:sv('M3.900 12a3.100 3.100 0 0 1 3.100-3.100h4V7H7a5 5 0 0 0 0 10h4v-1.900H7A3.100 3.100 0 0 1 3.900 12zM8 13h8v-2H8v2zm9-6h-4v1.900h4a3.100 3.100 0 0 1 0 6.200h-4V17h4a5 5 0 0 0 0-10z'),
+people:sv('M16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-8 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 2c-2.300 0-7 1.200-7 3.500V19h14v-2.500C15 14.200 10.300 13 8 13zm8 0c-.3 0-.6 0-1 .1 1.200.9 2 2 2 3.400V19h6v-2.500c0-2.300-4.700-3.500-7-3.500z'),
+scan:sv('M3 3h6v2H5v4H3V3zm12 0h6v6h-2V5h-4V3zM3 15h2v4h4v2H3v-6zm16 0h2v4h-4v2h6v-6zM7 11h10v2H7z'),
+help:sv('M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 17h-2v-2h2v2zm2.100-7.800-.9.9c-.7.7-1.200 1.300-1.200 2.900h-2v-.5c0-1.100.5-2.100 1.200-2.800l1.200-1.300c.4-.3.6-.8.6-1.400 0-1.100-.9-2-2-2s-2 .9-2 2H8a4 4 0 0 1 8 0c0 .9-.4 1.700-.9 2.200z')};
+document.querySelectorAll('#tabs button span').forEach((s,i)=>s.innerHTML=I[['reg','list','box','gear'][i]]);
+
+/* ---- color ---- */
+const COLORS=['','#cf490e','#6b6b70','#8c8c91','#b3aca1','#1f1f21'];
+function applyColor(){const c=S.set.color,s=document.documentElement.style;if(c){s.setProperty('--g',c);s.setProperty('--gt','#fff')}else{s.removeProperty('--g');s.removeProperty('--gt')}}
+function colorM(){openM(`<h3>設定顏色</h3><div class="sw2">${COLORS.map(c=>`<button style="background:${c||'var(--ac)'}" onclick="setColor('${c}')">${S.set.color==c?I.check:''}</button>`).join('')}</div><br><input type="color" value="${S.set.color||'#3a3a42'}" oninput="setColor(this.value,1)">`)}
+function setColor(c,k){S.set.color=c;save();applyColor();if(!k)colorM();if(cur==3)r3()}
+
+/* ---- import / export ---- */
+const rowIO=(t,acc,imp,exp)=>`<div class="li"><span>${t}</span><span class="rw" style="gap:8px"><label class="p2 sm">匯入<input type="file" accept="${acc}" hidden onchange="${imp}(this.files[0]);this.value=''"></label><button class="p2 sm" onclick="${exp}">匯出</button></span></div>`;
+const dstr=()=>new Date().toISOString().slice(0,10);
+function dl(name,text,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();a.remove();toast('已匯出')}
+function readT(f,fn){if(!f)return;const r=new FileReader();r.onload=()=>{try{fn(r.result.trim())}catch(e){toast('檔案格式不符')}};r.readAsText(f)}
+const readJ=(f,fn)=>readT(f,t=>fn(JSON.parse(t)));
+function expA(){dl('全部資料-'+dstr()+'.json',JSON.stringify({type:'all',events:S.events,products:S.products,groups:S.groups,works:S.works,rules:S.rules,orders:S.orders,nid:S.nid}),'application/json')}
+function impA(f){readJ(f,j=>{if(!Array.isArray(j.products)||!Array.isArray(j.orders))throw 0;impAdo(j)})}
+async function impAdo(j){if(!await ask('將取代目前所有資料（'+j.products.length+' 項商品、'+j.orders.length+' 筆訂單），確認匯入？','匯入'))return;
+S.events=j.events&&j.events.length?j.events:S.events;S.products=j.products;S.groups=j.groups||[];S.works=j.works||[];S.rules=j.rules||{full:[],buy:[]};S.orders=j.orders;migOrders();S.nid=j.nid||S.nid;if(!S.events.some(e=>e.id==S.cur))S.cur=S.events[0].id;cart={};gift={};disc=0;save();if(SB_URL)qreset();render();toast('已匯入全部資料')}
+function expP(){dl('商品資料-'+dstr()+'.json',JSON.stringify({type:'products',groups:S.groups,works:S.works,products:S.products}),'application/json')}
+function expE(){dl('場次資料-'+dstr()+'.json',JSON.stringify({type:'events',events:S.events}),'application/json')}
+function expS(){openM(`<h3>匯出銷售資料</h3><p class="sub">包含所有場次的訂單。</p><button class="btn" style="width:100%" onclick="expSCsv()">下載 CSV（試算表用）</button><br><br><button class="btn o" style="width:100%" onclick="expSJson()">下載備份檔（可再匯入）</button>`)}
+function expSJson(){closeM();dl('銷售資料-'+dstr()+'.json',JSON.stringify({type:'sales',events:S.events,orders:S.orders}),'application/json')}
+function expSCsv(){closeM();const en=id=>(S.events.find(e=>e.id==id)||{}).name||'';const rows=[['場次','單號','時間','類型','狀態','暱稱','社群連結','品項','優惠','應收','已收','找零','成本']];
+S.orders.slice().reverse().forEach(o=>rows.push([en(o.ev),o.no,fmt(o.time),o.type=='pre'?'預購':'結帳',o.status,o.note||'',o.link||'',o.items.map(i=>i.name+'x'+i.qty+(i.gift?'(送)':'')).join(' / '),o.disc,o.total,rcv(o),Math.max(0,rcv(o)-o.total),oc(o)]));
+dl('銷售資料-'+dstr()+'.csv','\ufeff'+rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n'),'text/csv')}
+function impE(f){readJ(f,j=>{if(!Array.isArray(j.events))throw 0;let n=0;j.events.forEach(e=>{if(e&&e.name&&!S.events.some(x=>x.name==e.name)){S.events.push({id:Date.now()+n,name:e.name});n++}});save();render();toast('已匯入 '+n+' 個場次')})}
+function impS(f){readJ(f,j=>{if(!Array.isArray(j.orders))throw 0;const em={};let k=0;(j.events||[]).forEach(e=>{let x=S.events.find(y=>y.name==e.name);if(!x){x={id:Date.now()+(k++),name:e.name};S.events.push(x)}em[e.id]=x.id});
+const have=new Set(S.orders.map(o=>o.id));let n=0;j.orders.forEach(o=>{if(!o||have.has(o.id))return;o.ev=em[o.ev]??S.cur;S.orders.push(o);qo(o.id);n++});migOrders();S.orders.sort((a,b)=>b.time-a.time);save();render();toast('已匯入 '+n+' 筆訂單')})}
+function impP(f){readT(f,t=>{let n=0;
+if(t[0]=='{'||t[0]=='['){const j=JSON.parse(t),arr=Array.isArray(j)?j:j.products;if(!Array.isArray(arr))throw 0;(j.groups||[]).forEach(g=>{if(!S.groups.includes(g))S.groups.push(g)});(j.works||[]).forEach(g=>{if(!S.works.includes(g))S.works.push(g)});
+const idm={},imp=[];arr.forEach(p=>{if(!p||!p.name||p.price==null||isNaN(+p.price))return;const ex=S.products.find(x=>x.name==p.name);let tgt;
+if(ex){const {id,...rest}=p;Object.assign(ex,rest);tgt=ex}else{const id=p.id&&!S.products.some(x=>x.id==p.id)?p.id:Date.now()+n;tgt={...p,id,img:p.img||''};S.products.push(tgt)}
+idm[p.id]=tgt.id;imp.push(tgt);if(tgt.group&&!S.groups.includes(tgt.group))S.groups.push(tgt.group);if(tgt.work&&!S.works.includes(tgt.work))S.works.push(tgt.work);n++});
+imp.forEach(p=>{if(p.combo)p.combo=p.combo.map(c=>({...c,pid:idm[c.pid]??c.pid}))})}
+else{const rows=t.split(/\r?\n/).map(l=>(l.match(/("([^"]|"")*"|[^,]*)(,|$)/g)||[]).map(c=>c.replace(/,$/,'').replace(/^"|"$/g,'').replace(/""/g,'"').trim()));
+if(rows.length&&isNaN(+rows[0][1]))rows.shift();rows.forEach(c=>{if(!c[0]||c[1]===''||c[1]==null||isNaN(+c[1]))return;const st=(c[2]===''||c[2]==null)?null:+c[2],ex=S.products.find(p=>p.name==c[0]);if(ex)Object.assign(ex,{price:+c[1],stock:st});else S.products.push({id:Date.now()+n,name:c[0],price:+c[1],stock:st,img:''});n++})}
+save();render();toast('已匯入 '+n+' 項商品')})}
+/* ---- usage ---- */
+const fmtB=n=>n<1024?n+' B':n<1048576?Math.round(n/1024)+' KB':(n/1048576).toFixed(1)+' MB';
+async function loadUsage(){const ph=$('#uph'),dt=$('#udt');if(!ph)return;
+const dsz=new Blob([JSON.stringify({events:S.events,products:S.products.map(p=>({...p,img:p.img&&p.img.startsWith('data:')?'':p.img})),groups:S.groups,rules:S.rules,orders:S.orders})]).size;
+if(dt)dt.textContent=fmtB(dsz);
+let n=0,b=0;
+if(sb&&USER){try{let off=0;for(;;){const r=await sb.storage.from('product-images').list(USER.id,{limit:100,offset:off});if(r.error||!r.data||!r.data.length)break;r.data.forEach(f=>{n++;b+=(f.metadata&&f.metadata.size)||0});if(r.data.length<100)break;off+=100}}catch(e){}}
+else S.products.forEach(p=>{if(p.img){n++;if(p.img.startsWith('data:'))b+=Math.round(p.img.length*.75)}});
+const el=$('#uph');if(el)el.textContent=fmtB(b)+'（'+n+' 張）'}
+Object.assign(I,{
+chev:sv('M8.600 16.600 13.200 12 8.600 7.400 10 6l6 6-6 6-1.400-1.400z').replace('class="ic"','class="ic chv"'),
+search:sv('M15.500 14h-.79l-.28-.27A6.470 6.470 0 0 0 16 9.500 6.500 6.500 0 1 0 9.500 16c1.610 0 3.090-.59 4.230-1.570l.27.28v.79l5 4.990L20.490 19l-4.990-5zm-6 0C7.010 14 5 11.990 5 9.500S7.010 5 9.500 5 14 7.010 14 9.500 11.990 14 9.500 14z'),
+grid:sv('M3 3h8v8H3V3zm10 0h8v8h-8V3zM3 13h8v8H3v-8zm10 0h8v8h-8v-8z'),
+list2:sv('M3 5h18v2H3V5zm0 6h18v2H3v-2zm0 6h18v2H3v-2z'),
+plus:sv('M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z'),
+trash:sv('M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.500l-1-1h-5l-1 1H5v2h14V4z'),
+volume:sv('M3 9v6h4l5 5V4L7 9H3zm13.500 3A4.500 4.500 0 0 0 14 8v8a4.500 4.500 0 0 0 2.500-4zM14 3.230v2.060c2.890.86 5 3.540 5 6.710s-2.110 5.850-5 6.710v2.060c4.010-.91 7-4.490 7-8.770s-2.990-7.860-7-8.770z'),
+download:sv('M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z'),
+book:sv('M18 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2zM6 4h5v8l-2.500-1.500L6 12V4z'),
+image:sv('M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2zM8.500 13.500l2.500 3 3.500-4.500 4.500 6H5l3.500-4.500z'),
+tag:sv('M21.410 11.580l-9-9A2 2 0 0 0 11 2H4a2 2 0 0 0-2 2v7c0 .55.22 1.050.59 1.420l9 9c.36.36.86.58 1.410.58s1.050-.22 1.410-.59l7-7c.37-.36.59-.86.59-1.410s-.23-1.060-.59-1.420zM6.500 8a1.500 1.500 0 1 1 0-3 1.500 1.500 0 0 1 0 3z'),
+barcode:sv('M3 5h2v14H3V5zm4 0h1v14H7V5zm3 0h3v14h-3V5zm5 0h1v14h-1V5zm3 0h3v14h-3V5z')});
+Object.assign(I,{tri:sv('M6 9h12l-6 7z'),menu:sv('M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z'),filter:sv('M3 18h6v-2H3v2zM3 6v2h18V6H3zm0 7h12v-2H3v2z'),layers:sv('M11.990 18.540l-7.370-5.730L3 14.070l9 7 9-7-1.630-1.270-7.380 5.740zM12 16l7.360-5.730L21 9l-9-7-9 7 1.630 1.270L12 16z'),folder:sv('M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2z'),eye:sv('M12 4.500C7 4.500 2.730 7.610 1 12c1.730 4.390 6 7.500 11 7.500s9.270-3.110 11-7.500c-1.730-4.390-6-7.500-11-7.500zM12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z'),ud:sv('M12 5.830 15.170 9l1.410-1.410L12 3 7.410 7.590 8.830 9 12 5.830zm0 12.340L8.830 15l-1.410 1.410L12 21l4.590-4.590L15.170 15 12 18.170z').replace('class="ic"','class="ic chv"')});
+document.addEventListener('click',()=>{['#pm','#em','#om'].forEach(s=>{const m=$(s);m&&m.classList.remove('on')})});
+applyColor();render();initSB();
+
+</script></body></html>
