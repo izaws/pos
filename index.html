@@ -198,7 +198,7 @@ img.bi{background:#fff;border:1px solid var(--ln);object-fit:contain;border-radi
 :root{--cols:3;--gap:8px;--cw:clamp(340px,38vw,440px);--tb:max(6px,calc(env(safe-area-inset-bottom,0px) - 18px))}
 @media(min-width:900px){:root{--cols:4}}@media(min-width:1150px){:root{--cols:5}}
 .grid{grid-template-columns:repeat(var(--cols),1fr);gap:12px var(--gap)}
-.logo{height:auto;max-width:none;width:calc((100% - (var(--cols) - 1)*var(--gap))/var(--cols)/2);object-fit:contain}
+.logo{height:auto;max-width:none;margin-top:0;width:calc((100% - (var(--cols) - 1)*var(--gap))/var(--cols)/2*.85);object-fit:contain;display:block}.top{align-items:center}
 #tabs{bottom:var(--tb)}
 #bar{bottom:calc(var(--tb) + 80px)}
 .page{padding-bottom:calc(var(--tb) + 160px)}
