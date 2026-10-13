@@ -267,7 +267,7 @@ const lsave=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast(
 const save=()=>{lsave();qstate()};
 /* ---- sync (Supabase) ---- */
 const QK=KEY+'_q';let Q=[];try{Q=JSON.parse(localStorage.getItem(QK)||'[]')}catch(e){}
-const VER='v9.1 · 2026-10-13';
+const VER='v9.3 · 2026-10-13';
 let sb=null,USER=null,chan=null,flushing=false,ft=null,pt=null,PR=false,SYNERR=false,SYNMSG='',IMGERR='',LASTSIG='';
 const SL=[];let RTS='',ASKING=false;const slog=m=>{SL.push(new Date().toTimeString().slice(0,8)+' '+m);if(SL.length>25)SL.shift()};
 const errMsg=e=>(e&&(e.message||e.error_description||e.code))||String(e||'未知錯誤');
@@ -292,8 +292,8 @@ if(r&&r.error)throw r.error;slog('上傳 '+op.t+(op.id?' '+op.id:'')+' 成功');
 SYNERR=false;SYNMSG=''}catch(e){SYNERR=true;SYNMSG=errMsg(e);slog('上傳失敗：'+SYNMSG);setTimeout(flush,15000)}
 flushing=false;setSync()}
 function applyRemote(d,rows){const cur=S.cur;S.events=d.events&&d.events.length?d.events:S.events;S.products=d.products||[];S.groups=d.groups||[];S.works=d.works||S.works||[];S.rules=d.rules||{full:[],buy:[]};S.nid=Math.max(S.nid||10,d.nid||10);S.orders=rows.map(r=>r.data).sort((a,b)=>b.time-a.time);migOrders();migProds();if(!S.events.some(e=>e.id==cur))S.cur=S.events[0].id;Object.keys(cart).forEach(id=>{if(!P(id)){delete cart[id];delete gift[id]}});lsave()}
-async function pull(force){if(!sb||!USER||Q.length||flushing)return;
-try{const [a,b]=await Promise.all([sb.from('pos_state').select('data').maybeSingle(),sb.from('pos_orders').select('data').order('id',{ascending:false})]);if(a.error||b.error)throw (a.error||b.error);
+async function pull(force){if(!sb||!USER)return;if(Q.length||flushing){await pullOrdersOnly();return}
+try{const [a,b]=await Promise.all([sb.from('pos_state').select('data').eq('user_id',USER.id).maybeSingle(),sb.from('pos_orders').select('data').eq('user_id',USER.id).order('id',{ascending:false})]);if(a.error||b.error)throw (a.error||b.error);
 const jf=KEY+'_j',joined=localStorage.getItem(jf)==USER.id,mark=()=>{try{localStorage.setItem(jf,USER.id)}catch(e){}};
 if(!a.data){slog('雲端沒有資料，上傳本機資料');Q.push({t:'state'});S.orders.forEach(o=>Q.push({t:'o',id:o.id}));saveQ();mark();flush();return}
 if(Q.length)return;
@@ -305,16 +305,56 @@ applyRemote(a.data.data,b.data);LASTSIG=sig;slog('下載：雲端 '+S.products.l
 if(lo.length){lo.forEach(o=>{S.orders.push(o);Q.push({t:'o',id:o.id})});S.orders.sort((x,y)=>y.time-x.time);saveQ();lsave();flushSoon()}
 mark();
 const busy=['#md_m','#co_m','#ied'].some(x=>document.querySelector(x).classList.contains('on'));if(busy)PR=true;else render();SYNERR=false;setSync()}catch(e){SYNERR=true;SYNMSG=errMsg(e);slog('下載失敗：'+SYNMSG);setSync()}}
+// Independently download orders even when catalog updates are waiting to upload.
+// Local pending writes/deletions win until acknowledged; unrelated remote orders are merged.
+let pullingOrders=false;
+async function pullOrdersOnly(){
+ if(!sb||!USER||!navigator.onLine||pullingOrders)return;
+ pullingOrders=true;
+ try{
+  const {data,error}=await sb.from('pos_orders').select('data').eq('user_id',USER.id);
+  if(error)throw error;
+  const pending=new Set(Q.filter(q=>q.t==='o'||q.t==='od').map(q=>String(q.id)));
+  const pendingEvents=new Set(Q.filter(q=>q.t==='oev').map(q=>String(q.ev)));
+  const resetPending=Q.some(q=>q.t==='reset');
+  const local=new Map(S.orders.map(o=>[String(o.id),o]));
+  if(!resetPending){
+   const remote=new Map((data||[]).map(r=>[String(r.data.id),r.data]));
+   for(const [id,o] of remote){if(!pending.has(id)&&!pendingEvents.has(String(o.ev)))local.set(id,o)}
+   for(const [id,o] of [...local]){
+    if(!remote.has(id)&&!pending.has(id)&&!pendingEvents.has(String(o.ev)))local.delete(id);
+   }
+   const next=[...local.values()].sort((a,b)=>b.time-a.time);
+   if(JSON.stringify(next)!==JSON.stringify(S.orders)){S.orders=next;lsave();if(cur!==3)render();}
+  }
+ }catch(e){SYNERR=true;SYNMSG='訂單下載：'+errMsg(e);slog(SYNMSG)}
+ finally{pullingOrders=false;setSync()}
+}
 function pullSoon(){clearTimeout(pt);pt=setTimeout(pull,600)}
-function subscribe(){if(chan||!sb)return;chan=sb.channel('pos-'+USER.id).on('postgres_changes',{event:'*',schema:'public',table:'pos_state'},pullSoon).on('postgres_changes',{event:'*',schema:'public',table:'pos_orders'},pullSoon).subscribe(st=>{RTS=st;slog('即時連線：'+st)})}
-async function startSync(){setSync();await flush();await pull();subscribe();setSync()}
-async function initSB(){if(!SB_URL||!SB_KEY||!window.supabase)return;
+function subscribe(){if(chan||!sb||!USER)return;chan=sb.channel('pos-'+USER.id).on('postgres_changes',{event:'*',schema:'public',table:'pos_state'},pullSoon).on('postgres_changes',{event:'*',schema:'public',table:'pos_orders'},pullSoon).subscribe(st=>{RTS=st;slog('即時連線：'+st)})}
+async function startSync(){
+ setSync();
+ // On a new device, never upload default/stale local data before reading cloud.
+ const joined=localStorage.getItem(KEY+'_j')===USER.id;
+ if(!joined){
+   if(Q.length){slog('首次登入：暫停舊本機待上傳操作，先確認雲端');
+     const backup=JSON.stringify({state:S,queue:Q,at:new Date().toISOString()});
+     try{localStorage.setItem(KEY+'_presync_backup',backup)}catch(e){}
+     Q=[];saveQ();
+   }
+   await pull();
+ }else{
+   await flush();await pull();
+ }
+ subscribe();setSync();
+}
+async function initSB(){if(!SB_URL||!SB_KEY||!window.supabase){SYNERR=true;SYNMSG='Supabase 程式庫未載入';setSync();return}
 sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
-try{const {data}=await sb.auth.getSession();if(data.session){USER=data.session.user;startSync()}else $('#login').classList.add('on')}catch(e){}
+try{const {data}=await sb.auth.getSession();if(data.session){USER=data.session.user;await startSync()}else $('#login').classList.add('on')}catch(e){}
 sb.auth.onAuthStateChange((ev)=>{if(ev=='SIGNED_OUT'){USER=null;if(chan){sb.removeChannel(chan);chan=null}setSync();if(cur==3)r3()}});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&USER){flush().then(pull)}});
 window.addEventListener('online',()=>{if(USER)flush().then(pull)});
-setInterval(()=>{if(USER&&!document.hidden&&navigator.onLine&&!Q.length&&!flushing)pull()},20000)}
+setInterval(()=>{if(USER&&!document.hidden&&navigator.onLine){if(Q.length)flush().then(()=>pull());else if(!flushing)pull()}},20000)}
 async function doLogin(mode){const e=$('#lg_e').value.trim(),p=$('#lg_p').value,m=$('#lg_m');if(!e||p.length<6){m.textContent='請輸入信箱與至少 6 碼密碼';return}
 m.style.color='var(--sub)';m.textContent='處理中…';
 try{const r=mode=='up'?await sb.auth.signUp({email:e,password:p}):await sb.auth.signInWithPassword({email:e,password:p});
@@ -323,9 +363,9 @@ if(!r.data.session){m.textContent='註冊成功，請到信箱點驗證連結後
 USER=r.data.session.user;$('#login').classList.remove('on');startSync();if(cur==3)r3()}catch(x){m.style.color='var(--red)';m.textContent='連線失敗，請檢查網路'}}
 async function doLogout(){if(!await ask('確認登出？'))return;await sb.auth.signOut();USER=null;if(chan){sb.removeChannel(chan);chan=null}r3()}
 async function forceUp(){if(!await ask('確認用這台的資料覆蓋雲端？其他裝置同步後會變得和這台一樣。','覆蓋'))return;try{localStorage.setItem(KEY+'_j',USER.id)}catch(e){}qreset();toast('上傳中…')}
-async function forceDown(){if(!await ask('確認用雲端資料覆蓋這台？這台尚未上傳的資料會消失。','覆蓋'))return;Q=[];saveQ();let n=0;while(flushing&&n++<30)await new Promise(r=>setTimeout(r,300));await pull(true);toast('已用雲端資料更新')}
+async function forceDown(){if(!await ask('確認用雲端資料覆蓋這台？這台尚未上傳的資料會消失。','覆蓋'))return;Q=[];saveQ();let n=0;while(flushing&&n++<30)await new Promise(r=>setTimeout(r,300));await pull(true);toast(SYNERR?'下載失敗，請查看同步診斷':'已用雲端資料更新')}
 async function syncDiag(){toast('檢查中…');const L=[],ok=t=>L.push('✅ '+t),ng=t=>L.push('❌ '+t),wn=t=>L.push('⚠️ '+t);
-L.push('版本　'+VER);L.push('專案　'+(SB_URL?SB_URL.replace('https://','').split('.')[0]:'未設定'));
+L.push('版本　'+VER);L.push('目前網址　'+location.origin+location.pathname);L.push('專案　'+(SB_URL?SB_URL.replace('https://','').split('.')[0]:'未設定'));
 window.supabase?ok('Supabase 程式庫已載入'):ng('Supabase 程式庫沒有載入（網路不穩或被擋）');
 navigator.onLine?ok('目前有網路'):ng('目前離線');
 let cp=null,co=null;
@@ -335,7 +375,7 @@ if(a.error)ng('讀取雲端商品失敗：'+errMsg(a.error));else if(a.data){cp=
 const b=await sb.from('pos_orders').select('id',{count:'exact',head:true});
 if(b.error)ng('讀取雲端訂單失敗：'+errMsg(b.error));else{co=b.count;ok('雲端訂單：'+co+' 筆')}
 const st=await sb.storage.from('product-images').list(u.id,{limit:1});st.error?ng('圖片空間錯誤：'+errMsg(st.error)):ok('圖片空間可使用')}}catch(e){ng('檢查時發生錯誤：'+errMsg(e))}}else ng('Supabase 尚未初始化');
-L.push('即時連線　'+(RTS||'未連線'));L.push('本機　'+S.products.length+' 項商品、'+S.orders.length+' 筆訂單');
+L.push('即時連線　'+(RTS||'未連線'));L.push('登入 UID　'+(USER?USER.id:'無'));L.push('此裝置首次同步標記　'+(USER&&localStorage.getItem(KEY+'_j')===USER.id?'是':'否'));L.push('本機　'+S.products.length+' 項商品、'+S.orders.length+' 筆訂單');
 L.push('待上傳　'+Q.length+' 筆'+(Q.length?'（'+Q.slice(0,3).map(q=>q.t).join('、')+'…）':''));
 if(SYNERR)ng('最近一次同步錯誤：'+SYNMSG);if(IMGERR)wn('圖片上傳失敗：'+IMGERR);
 if(cp!=null&&(cp!=S.products.length||co!=S.orders.length))wn('本機與雲端數量不同，可在設定用「以這台資料覆蓋雲端」或「以雲端資料覆蓋這台」統一');
@@ -417,9 +457,9 @@ function preo(){openM(`<h3>預購（準備中）</h3><p class="sub">會先扣庫
 function alertM(m){const d=$('#ask');d.innerHTML=`<div class="ab"><p>${esc(m)}</p><div><button class="p2" id="aok" style="background:var(--ac);color:#fff">知道了</button></div></div>`;d.classList.add('on');$('#aok').onclick=()=>d.classList.remove('on')}
 function finish(type,note,cust,link){const t=total(),gl=giftLines(),items=Object.entries(cart).map(([id,q])=>({pid:+id,name:P(id).name,price:P(id).price,qty:q,gift:!!gift[id],cost:ucost(P(id))})).concat(gl.filter(x=>x.g&&x.qty>0).map(x=>({pid:x.g.id,name:x.g.name,price:x.g.price,qty:x.qty,gift:true,rule:x.txt,cost:ucost(x.g)}))),rw=gl.filter(x=>(x.g&&x.qty>0)||x.textonly).map(x=>x.txt+'：'+(x.g?x.g.name:x.note));
 items.forEach(i=>{const p=P(i.pid);(p.combo||[{pid:i.pid,q:1}]).forEach(c=>{const x=P(c.pid);if(x&&sk(x)!=null)x.evs[S.cur]=Math.max(0,sk(x)-i.qty*c.q)})});
-const no=String(S.nid++).padStart(3,'0').slice(-3),rc=t===0?0:(recv===''?t:+recv),oid=Date.now();
+const no=String(S.nid++).padStart(3,'0').slice(-3),rc=t===0?0:(recv===''?t:+recv),oid=Date.now()*1000+Math.floor(Math.random()*1000);
 S.orders.unshift({id:oid,ev:S.cur,no,time:oid,items,disc,total:t,recv:rc,type,status:type=='pre'?'準備中':'完成',note:note||'',link:link||'',rw,cust:cust||0});
-save();qo(oid);cart={};gift={};GQ={};disc=0;recv='';closeM();$('#co_m').classList.remove('on');toast(type=='pre'?'已建立預購':'結帳完成 找零 $'+Math.max(0,rc-t));render()}
+lsave();qo(oid);cart={};gift={};GQ={};disc=0;recv='';closeM();$('#co_m').classList.remove('on');toast(type=='pre'?'已建立預購':'結帳完成 找零 $'+Math.max(0,rc-t));render()}
 /* orders */
 const fmt=t=>{const d=new Date(t);return d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
 let OEV=null;
@@ -498,7 +538,14 @@ ${rowIO('銷售資料','.json,application/json','impS','expS()')}
 <div class="sec">使用量</div><div class="grp">
 <div class="li"><span class="sub" style="margin:0">照片</span><span id="uph" style="font-size:14px">計算中…</span></div>
 <div class="li"><span class="sub" style="margin:0">資料</span><span id="udt" style="font-size:14px">計算中…</span></div>
-<div class="li"><span class="sub" style="margin:0">免費額度</span><span style="font-size:13px;color:var(--sub)">照片 1 GB・資料庫 500 MB</span></div></div>`;swipe('#evl ');loadUsage()}
+<div class="li"><span class="sub" style="margin:0">免費額度</span><span style="font-size:13px;color:var(--sub)">照片 1 GB・資料庫 500 MB</span></div></div>
+<div class="sec">分類新增與跨裝置同步說明</div>
+<div class="grp" style="padding:16px;line-height:1.75;font-size:13px;color:var(--tx)">
+<b>商品分類與新增</b><div class="sub">在商品管理新增或修改分類、商品、場次、價格及優惠後，會先保存在目前裝置，再嘗試上傳雲端。其他裝置須使用同一收銀機帳號並連上網路，才會收到更新。離線期間新增的分類只會先顯示在該裝置；兩台同時修改分類或商品時，可能以較晚同步的版本為準。</div>
+<div style="height:12px"></div><b>現場收銀與訂單</b><div class="sub">網路正常時會自動同步。網路不穩或斷線時仍可結帳，訂單先存在本機，恢復連線後自動補傳；待同步筆數可在上方「帳號與同步」查看。不同裝置的訂單會盡量合併，請勿在尚未同步完成前清除瀏覽器資料、解除安裝或更換裝置。</div>
+<div style="height:12px"></div><b>共用庫存注意事項</b><div class="sub">兩台同時收銀、尤其雙方離線時，無法立即知道另一台已售數量，可能發生超賣或庫存數字不一致。此版本尚未提供可靠的跨裝置庫存鎖定或自動超賣警報；活動中請定期核對實際庫存，網路恢復後檢查訂單與商品庫存。</div>
+<div style="height:12px"></div><b>同步異常時</b><div class="sub">先確認兩台登入同一帳號，再按「立即同步」及「同步診斷」。請先匯出「全部資料」備份，勿直接按「以這台資料覆蓋雲端」或「以雲端資料覆蓋這台」；這兩個動作可能造成尚未同步的修改或訂單遺失。離線狀態下兩台裝置的資料不會即時相同。</div>
+</div>`;swipe('#evl ');loadUsage()}
 function evCopy(id){const e=S.events.find(x=>x.id==id),nid=Date.now();S.products.forEach(p=>{if(inEv(p,id))p.evs[nid]=p.evs[id]});S.events.push({id:nid,name:e.name+' 複製'});save();r3();toast('已複製場次')}
 async function evDel(id){if(S.events.length<2)return toast('至少要留一個場次');if(!await ask('確認刪除？'))return;S.events=S.events.filter(e=>e.id!=id);S.orders=S.orders.filter(o=>o.ev!=id);S.products.forEach(p=>{if(p.evs)delete p.evs[id]});const gone=S.products.filter(p=>!Object.keys(p.evs||{}).length).map(p=>p.id);S.products=S.products.filter(p=>!gone.includes(p.id));S.products.forEach(p=>{if(p.combo)p.combo=p.combo.filter(c=>!gone.includes(c.pid))});if(S.cur==id)S.cur=S.events[0].id;save();qoev(id);render();toast('已刪除')}
 function ask(m,y){return new Promise(ok=>{const d=$('#ask');d.innerHTML=`<div class="ab"><p>${esc(m)}</p><div><button class="p2" id="ano">取消</button><button class="p2" id="ays" style="background:var(--red);color:#fff">${esc(y||'刪除')}</button></div></div>`;d.classList.add('on');const f=v=>{d.classList.remove('on');ok(v)};$('#ano').addEventListener('click',()=>f(false));$('#ays').addEventListener('click',()=>f(true))})}
