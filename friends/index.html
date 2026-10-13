@@ -273,7 +273,7 @@ input,select,textarea{font-size:16px!important}
 <div class="mask" id="md_m" onclick="if(event.target===this)closeM()"><div class="sheet" id="md"></div></div>
 <div id="ask"></div>
 <div class="ovl" id="ied"></div>
-<div class="ovl" id="login"><div class="lb"><h1>收銀機</h1><div class="sub" style="text-align:center;margin:0 0 6px">登入後資料會同步到手機與平板</div><input id="lg_e" type="email" placeholder="電子信箱" autocapitalize="off" autocomplete="username"><input id="lg_p" type="password" placeholder="密碼（至少 6 碼）" autocomplete="current-password"><div id="lg_m" class="sub" style="text-align:center;min-height:18px;color:var(--red)"></div><button class="btn" onclick="doLogin('in')">登入</button><button class="btn o" onclick="doLogin('up')">註冊新帳號</button><button class="lnk" style="color:var(--sub);font-size:13px;margin-top:4px" onclick="$('#login').classList.remove('on')">先用本機模式（不同步）</button></div></div><div class="toast" id="toast"></div><div class="ovl" id="friend_setup" style="z-index:100;overflow:auto"><div class="friend-setup-body">
+<div class="ovl" id="login"><div class="lb"><h1>收銀機</h1><div class="sub" style="text-align:center;margin:0 0 6px">登入後資料會同步到手機與平板</div><input id="lg_e" type="email" placeholder="電子信箱" autocapitalize="off" autocomplete="username"><input id="lg_p" type="password" placeholder="密碼（至少 6 碼）" autocomplete="current-password"><div id="lg_m" class="sub" style="text-align:center;min-height:18px;color:var(--red)"></div><button class="btn" onclick="doLogin('in')">登入</button><button class="lnk" style="color:var(--sub);font-size:13px;margin-top:4px" onclick="$('#login').classList.remove('on')">先用本機模式（不同步）</button></div></div><div class="toast" id="toast"></div><div class="ovl" id="friend_setup" style="z-index:100;overflow:auto"><div class="friend-setup-body">
 <h1>首次設定</h1>
 <div class="friend-intro">這個 App 的資料會存在你自己的 Supabase（免費），別人看不到。照下面做一次就好：<ol><li>到 <a href="https://supabase.com/dashboard" target="_blank" rel="noopener">supabase.com</a> 註冊，建立一個新專案。</li><li>左側 SQL Editor → New query，貼上下方 SQL，按 Run。</li><li>Authentication → Users → Add user → Create new user，填 email 和密碼，勾選 Auto Confirm User。</li><li>在專案中取得 Project URL，以及 Project Settings → API Keys 裡的 Publishable key，把兩個貼到下面。</li></ol></div>
 <label class="friend-label" for="friend_sql">SQL</label><div class="friend-section"><textarea id="friend_sql" readonly spellcheck="false" rows="8">-- POS friends: run in EACH friend&#x27;s OWN Supabase project SQL Editor.
@@ -355,8 +355,7 @@ async function friendResetCfg(){if(!await ask('切換 Supabase 專案？請先�
 const LOGO='logo.png'; /* 首頁左上角的 logo 圖片檔名 */
 /* ======================================================================== */
 const KEY='friends_doujin_pos_v1_'+(SB_URL?SB_URL.match(/^https:\/\/([^.]+)/)[1]:'unconfigured');
-let S={events:[{id:1,name:'第一場同人展'}],cur:1,seq:1,products:[
-{id:1,name:'壓克力立牌',price:80,stock:20,img:''},{id:2,name:'明信片',price:30,stock:50,img:''},{id:3,name:'小誌',price:150,stock:15,img:''}],
+let S={events:[{id:1,name:'第一場同人展'}],cur:1,seq:1,products:[],
 orders:[],rules:{full:[],buy:[]},nid:10};
 try{const r=localStorage.getItem(KEY);if(r)S=JSON.parse(r)}catch(e){}
 S.customers=S.customers||[];S.groups=S.groups||[];S.works=S.works||[];
@@ -456,7 +455,7 @@ try{const [a,b]=await Promise.all([sb.from('pos_state').select('data').eq('user_
 const jf=KEY+'_j',joined=localStorage.getItem(jf)==USER.id,mark=()=>{try{localStorage.setItem(jf,USER.id)}catch(e){}};
 if(!a.data){slog('雲端沒有資料，上傳本機資料');Q.push({t:'state'});S.orders.forEach(o=>Q.push({t:'o',id:o.id}));saveQ();mark();flush();return}
 if(Q.length)return;
-if(!joined&&!force&&!ASKING){const cp=a.data.data.products||[],ids=x=>x.map(y=>y.id).sort().join(),pristine=!S.orders.length&&ids(S.products)=='1,2,3';
+if(!joined&&!force&&!ASKING){const cp=a.data.data.products||[],ids=x=>x.map(y=>y.id).sort().join(),pristine=!S.orders.length&&(S.products.length===0||ids(S.products)==='1,2,3');
 if(!pristine&&(ids(S.products)!=ids(cp)||ids(S.orders)!=ids(b.data.map(r=>r.data)))){ASKING=true;const useLocal=await ask(`這台的資料和雲端不同。本機：${S.products.length} 項商品、${S.orders.length} 筆訂單；雲端：${cp.length} 項商品、${b.data.length} 筆訂單。按「用這台覆蓋雲端」會上傳這台的資料；按取消則以雲端為準（這台獨有的訂單會保留）。`,'用這台覆蓋雲端');ASKING=false;if(useLocal){mark();qreset();slog('選擇：用這台覆蓋雲端');return}}}
 const sig=JSON.stringify([a.data.data,b.data]);if(!force&&joined&&sig===LASTSIG){SYNERR=false;setSync();return}
 const have=new Set(b.data.map(r=>r.data.id)),lo=(joined||force)?[]:S.orders.filter(o=>!have.has(o.id));
@@ -516,9 +515,9 @@ window.addEventListener('online',()=>{if(USER){slog('偵測到恢復網路，重
 setInterval(()=>{if(cur===0&&(REMOTE_DONE.size||LOCAL_DONE.size)){completedProductIds();if(cur===0)r0()}if(USER&&!document.hidden&&navigator.onLine){if(Q.length)flush().then(()=>{pull();fetchRemotePending()});else if(!flushing)pull();fetchRemotePending()}},2000)}
 async function doLogin(mode){const e=$('#lg_e').value.trim(),p=$('#lg_p').value,m=$('#lg_m');if(!e||p.length<6){m.textContent='請輸入信箱與至少 6 碼密碼';return}
 m.style.color='var(--sub)';m.textContent='處理中…';
-try{const r=mode=='up'?await sb.auth.signUp({email:e,password:p}):await sb.auth.signInWithPassword({email:e,password:p});
+try{const r=await sb.auth.signInWithPassword({email:e,password:p});
 if(r.error){m.style.color='var(--red)';m.textContent=r.error.message;return}
-if(!r.data.session){m.textContent='註冊成功，請到信箱點驗證連結後再登入';return}
+if(!r.data.session){m.style.color='var(--red)';m.textContent='登入失敗，請確認帳號設定';return}
 USER=r.data.session.user;$('#login').classList.remove('on');startSync();if(cur==3)r3()}catch(x){m.style.color='var(--red)';m.textContent='連線失敗，請檢查網路'}}
 async function doLogout(){if(!await ask('確認登出？'))return;await sb.auth.signOut();USER=null;if(chan){sb.removeChannel(chan);chan=null}r3()}
 async function forceUp(){if(!await ask('確認用這台的資料覆蓋雲端？其他裝置同步後會變得和這台一樣。','覆蓋'))return;try{localStorage.setItem(KEY+'_j',USER.id)}catch(e){}qreset();toast('上傳中…')}
