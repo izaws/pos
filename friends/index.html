@@ -235,6 +235,26 @@ input,select,textarea{font-size:16px!important}
 .sbody.rl .pk{flex:1 1 0;min-height:140px;max-height:none}
 /* product grid drag handle */
 .gh{position:absolute;right:6px;top:6px;background:rgba(255,255,255,.88);color:var(--tx);border-radius:8px;padding:4px;z-index:2;margin:0}
+
+/* Friends first-time setup: match the collection-record app's setup screen */
+#friend_setup{background:#f0eeee;color:#222;font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif;padding:env(safe-area-inset-top,0px) 0 32px;display:none;align-items:stretch}
+#friend_setup.on{display:flex}
+#friend_setup .friend-setup-body{width:100%;max-width:840px;margin:0 auto;padding:0 max(16px,calc(50vw - 350px)) 32px;box-sizing:border-box}
+#friend_setup h1{font-size:20px;font-weight:700;margin:12px 0 8px;text-align:left;color:#222}
+#friend_setup .friend-intro{background:#fff;border-radius:18px;padding:13px 12px;font-size:15px;line-height:1.7;color:#222}
+#friend_setup .friend-intro ol{margin:8px 0 0;padding-left:24px}
+#friend_setup .friend-intro li{padding:0 0 1px}
+#friend_setup .friend-intro a{color:inherit}
+#friend_setup .friend-label{display:block;color:#8a8a8e;font-size:14px;margin:30px 4px 8px}
+#friend_setup .friend-section{background:#fff;border-radius:18px;padding:12px}
+#friend_setup #friend_sql{width:100%;height:160px;resize:vertical;border:0;outline:0;padding:6px;background:transparent;color:#222;font:12px/1.45 monospace;box-sizing:border-box;display:block}
+#friend_setup .friend-copy{width:100%;border:0;border-radius:99px;background:#e9e9ec;color:#222;font:16px/1.4 inherit;font-size:16px;padding:10px 12px;margin-top:8px;cursor:pointer}
+#friend_setup .friend-field{background:#fff;border-radius:18px;padding:10px 12px}
+#friend_setup .friend-field input{display:block;width:100%;background:transparent;border:0;outline:0;padding:8px 6px;color:#222;font-size:17px;box-sizing:border-box;box-shadow:none}
+#friend_setup .friend-field input::placeholder{color:#8a8a8e}
+#friend_setup .friend-save{display:block;width:100%;border:0;border-radius:99px;background:#fff;color:#222;font-size:16px;padding:11px 12px;margin-top:20px;cursor:pointer}
+#friend_setup .friend-back{display:block;margin:14px auto 0;background:transparent;border:0;color:#8a8a8e;font-size:14px;cursor:pointer}
+#friend_setup .friend-warning{text-align:center;color:#8a8a8e;font-size:13px;margin:14px 0 0}
 </style></head><body>
 <div id="app">
 <div class="page on" id="p0"></div>
@@ -253,7 +273,10 @@ input,select,textarea{font-size:16px!important}
 <div class="mask" id="md_m" onclick="if(event.target===this)closeM()"><div class="sheet" id="md"></div></div>
 <div id="ask"></div>
 <div class="ovl" id="ied"></div>
-<div class="ovl" id="login"><div class="lb"><h1>收銀機</h1><div class="sub" style="text-align:center;margin:0 0 6px">登入後資料會同步到手機與平板</div><input id="lg_e" type="email" placeholder="電子信箱" autocapitalize="off" autocomplete="username"><input id="lg_p" type="password" placeholder="密碼（至少 6 碼）" autocomplete="current-password"><div id="lg_m" class="sub" style="text-align:center;min-height:18px;color:var(--red)"></div><button class="btn" onclick="doLogin('in')">登入</button><button class="btn o" onclick="doLogin('up')">註冊新帳號</button><button class="lnk" style="color:var(--sub);font-size:13px;margin-top:4px" onclick="$('#login').classList.remove('on')">先用本機模式（不同步）</button></div></div><div class="toast" id="toast"></div><div class="ovl" id="friend_setup" style="z-index:100;overflow:auto"><div class="lb" style="max-width:560px;margin:24px auto;max-height:none"><h1>首次設定收銀機</h1><div class="sub" style="font-size:14px;line-height:1.7;margin-bottom:14px">每位使用者使用自己的 Supabase 專案，商品、訂單、庫存與照片不會佔用朋友的資料庫。第一次設定需連上網路。</div><div style="font-size:14px;line-height:1.8;margin-bottom:12px">① 到 <a href="https://supabase.com/dashboard" target="_blank" rel="noopener">Supabase</a> 建立免費專案。<br>② SQL Editor → New query，貼上下方 SQL 並執行。<br>③ Authentication → Users → Add user，建立自己的登入帳號（可選 Auto Confirm User）。<br>④ 到 Project Settings → API Keys，複製 Project URL 和 Publishable key（或 anon key）。</div><button class="btn o" style="width:100%;margin-bottom:8px" onclick="friendCopyText($('#friend_sql').value)">複製建置 SQL</button><textarea id="friend_sql" readonly spellcheck="false" rows="5" style="font:11px/1.5 monospace;resize:vertical;margin-bottom:12px">-- POS friends: run in EACH friend&#x27;s OWN Supabase project SQL Editor.
+<div class="ovl" id="login"><div class="lb"><h1>收銀機</h1><div class="sub" style="text-align:center;margin:0 0 6px">登入後資料會同步到手機與平板</div><input id="lg_e" type="email" placeholder="電子信箱" autocapitalize="off" autocomplete="username"><input id="lg_p" type="password" placeholder="密碼（至少 6 碼）" autocomplete="current-password"><div id="lg_m" class="sub" style="text-align:center;min-height:18px;color:var(--red)"></div><button class="btn" onclick="doLogin('in')">登入</button><button class="btn o" onclick="doLogin('up')">註冊新帳號</button><button class="lnk" style="color:var(--sub);font-size:13px;margin-top:4px" onclick="$('#login').classList.remove('on')">先用本機模式（不同步）</button></div></div><div class="toast" id="toast"></div><div class="ovl" id="friend_setup" style="z-index:100;overflow:auto"><div class="friend-setup-body">
+<h1>首次設定</h1>
+<div class="friend-intro">這個 App 的資料會存在你自己的 Supabase（免費），別人看不到。照下面做一次就好：<ol><li>到 <a href="https://supabase.com/dashboard" target="_blank" rel="noopener">supabase.com</a> 註冊，建立一個新專案。</li><li>左側 SQL Editor → New query，貼上下方 SQL，按 Run。</li><li>Authentication → Users → Add user → Create new user，填 email 和密碼，勾選 Auto Confirm User。</li><li>在專案中取得 Project URL，以及 Project Settings → API Keys 裡的 Publishable key，把兩個貼到下面。</li></ol></div>
+<label class="friend-label" for="friend_sql">SQL</label><div class="friend-section"><textarea id="friend_sql" readonly spellcheck="false" rows="8">-- POS friends: run in EACH friend&#x27;s OWN Supabase project SQL Editor.
 -- Use a new empty project. Does not modify the owner&#x27;s existing project.
 create table if not exists public.pos_state (
   user_id uuid primary key references auth.users(id) on delete cascade,
@@ -306,7 +329,13 @@ exception when duplicate_object then null; end $$;
 do $$ begin
   alter publication supabase_realtime add table public.pos_sync_pending;
 exception when duplicate_object then null; end $$;
-</textarea><input id="friend_url" placeholder="Project URL：https://xxxx.supabase.co" autocapitalize="off" style="margin-bottom:8px"><input id="friend_key" placeholder="Publishable key（不是 secret key）" autocapitalize="off" style="margin-bottom:12px"><button class="btn" style="width:100%" onclick="friendSaveCfg()">儲存設定並前往登入</button><button class="lnk" style="width:100%;margin-top:14px" onclick="friendCloseSetup()">返回收銀機</button><div class="sub" style="text-align:center;margin-top:10px">請勿輸入 service_role、secret key 或資料庫密碼。</div></div></div>
+</textarea><button type="button" class="friend-copy" onclick="friendCopyText($('#friend_sql').value)">複製 SQL</button></div>
+<label class="friend-label" for="friend_url">Project URL</label><div class="friend-field"><input id="friend_url" placeholder="https://xxxx.supabase.co" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+<label class="friend-label" for="friend_key">Publishable key</label><div class="friend-field"><input id="friend_key" placeholder="sb_publishable_..." autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+<button type="button" class="friend-save" onclick="friendSaveCfg()">儲存並前往登入</button>
+<button type="button" class="friend-back" onclick="friendCloseSetup()">返回收銀機</button>
+<div class="friend-warning">不要貼 secret key 或資料庫密碼。</div>
+</div></div></div>
 <script>
 /* ===== Supabase 設定：把下面兩行填上你的 Project URL 與 anon(publishable) key ===== */
 const FRIEND_CFG_KEY='friends_pos_supabase_cfg_v1';
@@ -338,7 +367,7 @@ const lsave=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast(
 const save=()=>{lsave();qstate()};
 /* ---- sync (Supabase) ---- */
 const QK=KEY+'_q';let Q=[];try{Q=JSON.parse(localStorage.getItem(QK)||'[]')}catch(e){}
-const VER='v9.3.11 Friends · 2026-10-13';
+const VER='v9.3.12 Friends · 2026-10-13';
 let sb=null,USER=null,chan=null,flushing=false,ft=null,pt=null,PR=false,SYNERR=false,SYNMSG='',IMGERR='',LASTSIG='';
 let REMOTE_PENDING=new Set(),REMOTE_DONE=new Set(),LOCAL_DONE=new Map(),PENDING_TABLE_OK=true,pendingFetchBusy=false,lastPendingFetch=0;
 let PENDING_RETRY_AT=0, pendingErrorCount=0;
