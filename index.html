@@ -272,7 +272,7 @@ const lsave=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast(
 const save=()=>{lsave();qstate()};
 /* ---- sync (Supabase) ---- */
 const QK=KEY+'_q';let Q=[];try{Q=JSON.parse(localStorage.getItem(QK)||'[]')}catch(e){}
-const VER='v9.3.7 · 2026-10-13';
+const VER='v9.3.9 · 2026-10-13';
 let sb=null,USER=null,chan=null,flushing=false,ft=null,pt=null,PR=false,SYNERR=false,SYNMSG='',IMGERR='',LASTSIG='';
 let REMOTE_PENDING=new Set(),REMOTE_DONE=new Set(),LOCAL_DONE=new Map(),PENDING_TABLE_OK=true,pendingFetchBusy=false,lastPendingFetch=0;
 let PENDING_RETRY_AT=0, pendingErrorCount=0;
@@ -285,7 +285,7 @@ function qstate(){if(!SB_URL)return;if(!Q.some(q=>q.t=='state')){Q.push({t:'stat
 const qo=id=>qpush({t:'o',id}),qod=id=>qpush({t:'od',id}),qoev=ev=>qpush({t:'oev',ev});
 function pendingProductIds(){const ids=new Set(REMOTE_PENDING);for(const q of Q){if(q.t!=='o'&&q.t!=='sale_state')continue;const o=S.orders.find(x=>String(x.id)===String(q.id));if(!o)continue;for(const i of o.items||[]){ids.add(String(i.pid));const p=P(i.pid);for(const c of (p&&p.combo)||[])ids.add(String(c.pid))}}return ids}
 function completedProductIds(){const ids=new Set(REMOTE_DONE);const now=Date.now();for(const [id,until] of LOCAL_DONE){if(until<=now)LOCAL_DONE.delete(id);else ids.add(id)}return ids}
-function markLocalCompleted(o){if(!o)return;const until=Date.now()+4000;for(const id of pendingIdsForOrder(o))LOCAL_DONE.set(id,until);if(cur===0)r0();setTimeout(()=>{if(cur===0)r0()},4100)}
+function markLocalCompleted(o){if(!o)return;const until=Date.now()+2000;for(const id of pendingIdsForOrder(o))LOCAL_DONE.set(id,until);if(cur===0)r0();setTimeout(()=>{if(cur===0)r0()},2100)}
 // Shared pending status. Requires the accompanying SQL migration. Failures never block checkout.
 const pendingIdsForOrder=o=>[...new Set((o.items||[]).flatMap(i=>{const p=P(i.pid);return [String(i.pid),...((p&&p.combo)||[]).map(c=>String(c.pid))]}))];
 async function fetchRemotePending(){
@@ -298,8 +298,8 @@ async function fetchRemotePending(){
   const now=Date.now(),pending=new Set(),done=new Set();
   for(const row of data||[]){
    const isDone=row.status==='done';
-   // Completion is visible for only 4 seconds, regardless of cloud retention time.
-   if(isDone && (!row.completed_at || now-new Date(row.completed_at).getTime()>4000))continue;
+   // Completion is visible for only 2 seconds, regardless of cloud retention time.
+   if(isDone && (!row.completed_at || now-new Date(row.completed_at).getTime()>2000))continue;
    for(const id of row.product_ids||[])(isDone?done:pending).add(String(id));
   }
   const changed=JSON.stringify([[...pending].sort(),[...done].sort()])!==JSON.stringify([[...REMOTE_PENDING].sort(),[...REMOTE_DONE].sort()]);
@@ -324,13 +324,21 @@ async function completePending(id){
  if(!sb||!USER||!navigator.onLine)return false;
  try{
   const now=new Date();
-  // 20s retention for remote polling; UI displays done only for 4s from completed_at.
-  const {data,error}=await sb.from('pos_sync_pending').update({status:'done',completed_at:now.toISOString(),expires_at:new Date(now.getTime()+20000).toISOString()}).eq('user_id',USER.id).eq('order_id',String(id)).select('order_id');
+  const order=S.orders.find(x=>String(x.id)===String(id));
+  // UPSERT instead of UPDATE: offline publication may have failed, or the pending
+  // row may have expired/been removed. A missing notification must never strand
+  // an already-uploaded sale_state at the head of the durable queue.
+  const {error}=await sb.from('pos_sync_pending').upsert({
+   user_id:USER.id,order_id:String(id),
+   product_ids:order?pendingIdsForOrder(order):[],
+   status:'done',completed_at:now.toISOString(),
+   expires_at:new Date(now.getTime()+20000).toISOString()
+  },{onConflict:'user_id,order_id'});
   if(error)throw error;
-  if(!data||!data.length)throw new Error('找不到該訂單的待同步紀錄');
   return true;
  }catch(e){slog('同步完成狀態更新失敗（將重試）：'+errMsg(e));return false}
 }
+
 function qreset(){Q=[{t:'reset'},{t:'state'},...S.orders.map(o=>({t:'o',id:o.id}))];saveQ();flushSoon()}
 function flushSoon(){clearTimeout(ft);ft=setTimeout(flush,500)}
 const stateData=()=>({events:S.events,products:S.products,groups:S.groups,works:S.works,rules:S.rules,nid:S.nid});
@@ -340,10 +348,11 @@ async function flush(){if(!sb||!USER||flushing||!navigator.onLine){setSync();ret
 try{while(Q.length){const op=Q[0];let r=null;
 if(op.t=='state'||op.t=='sale_state'){await migrateImgs();r=await sb.from('pos_state').upsert({user_id:USER.id,data:stateData(),updated_at:new Date().toISOString()})}
 else if(op.t=='o'){const o=S.orders.find(x=>x.id==op.id);if(o){const announced=await publishPending(o);if(!announced)slog('跨裝置提示尚未發布，訂單仍照常同步')}if(o)r=await sb.from('pos_orders').upsert({user_id:USER.id,id:o.id,ev:o.ev,data:o,updated_at:new Date().toISOString()})}
+else if(op.t=='mark_done'){/* state already uploaded; only retry completion event */}
 else if(op.t=='od')r=await sb.from('pos_orders').delete().eq('user_id',USER.id).eq('id',op.id);
 else if(op.t=='oev')r=await sb.from('pos_orders').delete().eq('user_id',USER.id).eq('ev',op.ev);
 else if(op.t=='reset')r=await sb.from('pos_orders').delete().eq('user_id',USER.id);
-if(r&&r.error)throw r.error;slog('上傳 '+op.t+(op.id?' '+op.id:'')+' 成功');if(op.t==='sale_state'){const order=S.orders.find(x=>String(x.id)===String(op.id));const ok=await completePending(op.id);if(!ok)throw new Error('同步完成標記未成功，稍後重試');markLocalCompleted(order);await fetchRemotePending()}Q.shift();saveQ();if(op.t==='o'||op.t==='sale_state'){if(cur===0)r0();setSync()}}
+if(r&&r.error)throw r.error;slog('上傳 '+op.t+(op.id?' '+op.id:'')+' 成功');if(op.t==='sale_state'){const order=S.orders.find(x=>String(x.id)===String(op.id));const ok=await completePending(op.id);if(!ok){Q[0]={t:'mark_done',id:op.id};saveQ();throw new Error('同步完成標記未成功，稍後重試')}markLocalCompleted(order);await fetchRemotePending()}else if(op.t==='mark_done'){const order=S.orders.find(x=>String(x.id)===String(op.id));const ok=await completePending(op.id);if(!ok)throw new Error('同步完成標記未成功，稍後重試');markLocalCompleted(order);await fetchRemotePending()}Q.shift();saveQ();if(op.t==='o'||op.t==='sale_state'){if(cur===0)r0();setSync()}}
 SYNERR=false;SYNMSG=''}catch(e){SYNERR=true;SYNMSG=errMsg(e);slog('上傳失敗：'+SYNMSG);setTimeout(flush,15000)}
 flushing=false;setSync();if(PENDING_TABLE_OK&&navigator.onLine)fetchRemotePending()}
 function applyRemote(d,rows){const cur=S.cur;S.events=d.events&&d.events.length?d.events:S.events;S.products=d.products||[];S.groups=d.groups||[];S.works=d.works||S.works||[];S.rules=d.rules||{full:[],buy:[]};S.nid=Math.max(S.nid||10,d.nid||10);S.orders=rows.map(r=>r.data).sort((a,b)=>b.time-a.time);migOrders();migProds();if(!S.events.some(e=>e.id==cur))S.cur=S.events[0].id;Object.keys(cart).forEach(id=>{if(!P(id)){delete cart[id];delete gift[id]}});lsave()}
