@@ -235,26 +235,6 @@ input,select,textarea{font-size:16px!important}
 .sbody.rl .pk{flex:1 1 0;min-height:140px;max-height:none}
 /* product grid drag handle */
 .gh{position:absolute;right:6px;top:6px;background:rgba(255,255,255,.88);color:var(--tx);border-radius:8px;padding:4px;z-index:2;margin:0}
-
-/* Friends first-time setup: match the collection-record app's setup screen */
-#friend_setup{background:#f0eeee;color:#222;font-family:-apple-system,"PingFang TC","Noto Sans TC",sans-serif;padding:env(safe-area-inset-top,0px) 0 32px;display:none;align-items:stretch}
-#friend_setup.on{display:flex}
-#friend_setup .friend-setup-body{width:100%;max-width:840px;margin:0 auto;padding:0 max(16px,calc(50vw - 350px)) 32px;box-sizing:border-box}
-#friend_setup h1{font-size:20px;font-weight:700;margin:12px 0 8px;text-align:left;color:#222}
-#friend_setup .friend-intro{background:#fff;border-radius:18px;padding:13px 12px;font-size:15px;line-height:1.7;color:#222}
-#friend_setup .friend-intro ol{margin:8px 0 0;padding-left:24px}
-#friend_setup .friend-intro li{padding:0 0 1px}
-#friend_setup .friend-intro a{color:inherit}
-#friend_setup .friend-label{display:block;color:#8a8a8e;font-size:14px;margin:30px 4px 8px}
-#friend_setup .friend-section{background:#fff;border-radius:18px;padding:12px}
-#friend_setup #friend_sql{width:100%;height:160px;resize:vertical;border:0;outline:0;padding:6px;background:transparent;color:#222;font:12px/1.45 monospace;box-sizing:border-box;display:block}
-#friend_setup .friend-copy{width:100%;border:0;border-radius:99px;background:#e9e9ec;color:#222;font:16px/1.4 inherit;font-size:16px;padding:10px 12px;margin-top:8px;cursor:pointer}
-#friend_setup .friend-field{background:#fff;border-radius:18px;padding:10px 12px}
-#friend_setup .friend-field input{display:block;width:100%;background:transparent;border:0;outline:0;padding:8px 6px;color:#222;font-size:17px;box-sizing:border-box;box-shadow:none}
-#friend_setup .friend-field input::placeholder{color:#8a8a8e}
-#friend_setup .friend-save{display:block;width:100%;border:0;border-radius:99px;background:#fff;color:#222;font-size:16px;padding:11px 12px;margin-top:20px;cursor:pointer}
-#friend_setup .friend-back{display:block;margin:14px auto 0;background:transparent;border:0;color:#8a8a8e;font-size:14px;cursor:pointer}
-#friend_setup .friend-warning{text-align:center;color:#8a8a8e;font-size:13px;margin:14px 0 0}
 </style></head><body>
 <div id="app">
 <div class="page on" id="p0"></div>
@@ -273,88 +253,13 @@ input,select,textarea{font-size:16px!important}
 <div class="mask" id="md_m" onclick="if(event.target===this)closeM()"><div class="sheet" id="md"></div></div>
 <div id="ask"></div>
 <div class="ovl" id="ied"></div>
-<div class="ovl" id="login"><div class="lb"><h1>收銀機</h1><div class="sub" style="text-align:center;margin:0 0 6px">登入後資料會同步到手機與平板</div><input id="lg_e" type="email" placeholder="電子信箱" autocapitalize="off" autocomplete="username"><input id="lg_p" type="password" placeholder="密碼（至少 6 碼）" autocomplete="current-password"><div id="lg_m" class="sub" style="text-align:center;min-height:18px;color:var(--red)"></div><button class="btn" onclick="doLogin('in')">登入</button><button class="lnk" style="color:var(--sub);font-size:13px;margin-top:4px" onclick="$('#login').classList.remove('on')">先用本機模式（不同步）</button></div></div><div class="toast" id="toast"></div><div class="ovl" id="friend_setup" style="z-index:100;overflow:auto"><div class="friend-setup-body">
-<h1>首次設定</h1>
-<div class="friend-intro">這個 App 的資料會存在你自己的 Supabase（免費），別人看不到。照下面做一次就好：<ol><li>到 <a href="https://supabase.com/dashboard" target="_blank" rel="noopener">supabase.com</a> 註冊，建立一個新專案。</li><li>左側 SQL Editor → New query，貼上下方 SQL，按 Run。</li><li>Authentication → Users → Add user → Create new user，填 email 和密碼，勾選 Auto Confirm User。</li><li>在專案中取得 Project URL，以及 Project Settings → API Keys 裡的 Publishable key，把兩個貼到下面。</li></ol></div>
-<label class="friend-label" for="friend_sql">SQL</label><div class="friend-section"><textarea id="friend_sql" readonly spellcheck="false" rows="8">-- POS friends: run in EACH friend&#x27;s OWN Supabase project SQL Editor.
--- Use a new empty project. Does not modify the owner&#x27;s existing project.
-create table if not exists public.pos_state (
-  user_id uuid primary key references auth.users(id) on delete cascade,
-  data jsonb not null default &#x27;{}&#x27;::jsonb,
-  updated_at timestamptz not null default now()
-);
-create table if not exists public.pos_orders (
-  user_id uuid not null references auth.users(id) on delete cascade,
-  id text not null,
-  ev bigint,
-  data jsonb not null,
-  updated_at timestamptz not null default now(),
-  primary key (user_id,id)
-);
-create index if not exists pos_orders_user_ev_idx on public.pos_orders(user_id,ev);
-create table if not exists public.pos_sync_pending (
-  user_id uuid not null references auth.users(id) on delete cascade,
-  order_id text not null,
-  product_ids text[] not null default &#x27;{}&#x27;,
-  expires_at timestamptz not null,
-  status text not null default &#x27;pending&#x27;,
-  completed_at timestamptz,
-  primary key(user_id,order_id)
-);
-create index if not exists pos_sync_pending_expiry_idx on public.pos_sync_pending(user_id,expires_at);
-grant usage on schema public to authenticated;
-grant select,insert,update,delete on public.pos_state,public.pos_orders,public.pos_sync_pending to authenticated;
-alter table public.pos_state enable row level security;
-alter table public.pos_orders enable row level security;
-alter table public.pos_sync_pending enable row level security;
-drop policy if exists pos_state_own on public.pos_state;
-create policy pos_state_own on public.pos_state for all to authenticated using(user_id=(select auth.uid())) with check(user_id=(select auth.uid()));
-drop policy if exists pos_orders_own on public.pos_orders;
-create policy pos_orders_own on public.pos_orders for all to authenticated using(user_id=(select auth.uid())) with check(user_id=(select auth.uid()));
-drop policy if exists pos_sync_pending_own on public.pos_sync_pending;
-create policy pos_sync_pending_own on public.pos_sync_pending for all to authenticated using(user_id=(select auth.uid())) with check(user_id=(select auth.uid()));
-insert into storage.buckets(id,name,public) values(&#x27;product-images&#x27;,&#x27;product-images&#x27;,true) on conflict(id) do update set public=true;
-drop policy if exists pos_images_upload_own on storage.objects;
-create policy pos_images_upload_own on storage.objects for insert to authenticated with check(bucket_id=&#x27;product-images&#x27; and (storage.foldername(name))[1]=(select auth.uid())::text);
-drop policy if exists pos_images_read_own on storage.objects;
-create policy pos_images_read_own on storage.objects for select to authenticated using(bucket_id=&#x27;product-images&#x27; and (storage.foldername(name))[1]=(select auth.uid())::text);
-drop policy if exists pos_images_delete_own on storage.objects;
-create policy pos_images_delete_own on storage.objects for delete to authenticated using(bucket_id=&#x27;product-images&#x27; and (storage.foldername(name))[1]=(select auth.uid())::text);
-do $$ begin
-  alter publication supabase_realtime add table public.pos_state;
-exception when duplicate_object then null; end $$;
-do $$ begin
-  alter publication supabase_realtime add table public.pos_orders;
-exception when duplicate_object then null; end $$;
-do $$ begin
-  alter publication supabase_realtime add table public.pos_sync_pending;
-exception when duplicate_object then null; end $$;
-</textarea><button type="button" class="friend-copy" onclick="friendCopyText($('#friend_sql').value)">複製 SQL</button></div>
-<label class="friend-label" for="friend_url">Project URL</label><div class="friend-field"><input id="friend_url" placeholder="https://xxxx.supabase.co" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
-<label class="friend-label" for="friend_key">Publishable key</label><div class="friend-field"><input id="friend_key" placeholder="sb_publishable_..." autocapitalize="off" autocorrect="off" spellcheck="false"></div>
-<button type="button" class="friend-save" onclick="friendSaveCfg()">儲存並前往登入</button>
-<button type="button" class="friend-back" onclick="friendCloseSetup()">返回收銀機</button>
-<div class="friend-warning">不要貼 secret key 或資料庫密碼。</div>
-</div></div></div>
+<div class="ovl" id="login"><div class="lb"><h1>收銀機</h1><div class="sub" style="text-align:center;margin:0 0 6px">登入後資料會同步到手機與平板</div><input id="lg_e" type="email" placeholder="電子信箱" autocapitalize="off" autocomplete="username"><input id="lg_p" type="password" placeholder="密碼（至少 6 碼）" autocomplete="current-password"><div id="lg_m" class="sub" style="text-align:center;min-height:18px;color:var(--red)"></div><button class="btn" onclick="doLogin('in')">登入</button><button class="btn o" onclick="doLogin('up')">註冊新帳號</button><button class="lnk" style="color:var(--sub);font-size:13px;margin-top:4px" onclick="$('#login').classList.remove('on')">先用本機模式（不同步）</button></div></div><div class="toast" id="toast"></div>
 <script>
 /* ===== Supabase 設定：把下面兩行填上你的 Project URL 與 anon(publishable) key ===== */
-const FRIEND_CFG_KEY='friends_pos_supabase_cfg_v1';
-function friendReadLink(){const m=location.hash.match(/^#cfg=([A-Za-z0-9_-]+)$/);if(!m)return;try{const raw=atob(m[1].replace(/-/g,'+').replace(/_/g,'/'));const c=JSON.parse(raw);if(friendValid(c))localStorage.setItem(FRIEND_CFG_KEY,JSON.stringify({u:c.u,k:c.k}))}catch(e){}history.replaceState(null,'',location.pathname+location.search)}
-function friendValid(c){return !!(c&&/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(c.u||'')&&typeof c.k==='string'&&c.k.length>=15&&!/service_role|sb_secret_|secret/i.test(c.k))}
-friendReadLink();
-let FRIEND_CFG=null;try{const c=JSON.parse(localStorage.getItem(FRIEND_CFG_KEY)||'null');if(friendValid(c))FRIEND_CFG=c}catch(e){}
-const SB_URL=FRIEND_CFG?FRIEND_CFG.u.replace(/\/$/,''):'',SB_KEY=FRIEND_CFG?FRIEND_CFG.k:'';
-function friendCopyText(t){if(navigator.clipboard&&window.isSecureContext)return navigator.clipboard.writeText(t).then(()=>toast('已複製'),()=>friendCopyFallback(t));friendCopyFallback(t)}
-function friendCopyFallback(t){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');toast('已複製')}catch(e){toast('複製失敗，請手動選取')}a.remove()}
-function friendSaveCfg(){const c={u:$('#friend_url').value.trim().replace(/\/$/,''),k:$('#friend_key').value.trim()};if(!friendValid(c)){toast('請輸入正確的 Project URL 和 Publishable / anon key');return}localStorage.setItem(FRIEND_CFG_KEY,JSON.stringify(c));location.reload()}
-function friendSetup(){if(FRIEND_CFG){$('#friend_url').value=FRIEND_CFG.u;$('#friend_key').value=FRIEND_CFG.k}$('#friend_setup').classList.add('on')}
-function friendCloseSetup(){if(FRIEND_CFG)$('#friend_setup').classList.remove('on')}
-function friendCfgLink(){if(!FRIEND_CFG)return toast('尚未設定 Supabase');const b=btoa(JSON.stringify(FRIEND_CFG)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');friendCopyText(location.origin+location.pathname+'#cfg='+b)}
-async function friendResetCfg(){if(!await ask('切換 Supabase 專案？請先確認目前待同步數量為 0 並匯出備份。切換後會進入另一個獨立的資料空間。','切換'))return;localStorage.removeItem(FRIEND_CFG_KEY);location.reload()}
-
+const SB_URL='https://ucdvzvtxmzlwwmgsnaco.supabase.co',SB_KEY='sb_publishable_qGi2ddqAR47vGnoCFdn7kw_Xrk0cJB2';
 const LOGO='logo.png'; /* 首頁左上角的 logo 圖片檔名 */
 /* ======================================================================== */
-const KEY='friends_doujin_pos_v1_'+(SB_URL?SB_URL.match(/^https:\/\/([^.]+)/)[1]:'unconfigured');
+const KEY='doujin_pos_v1';
 let S={events:[{id:1,name:'第一場同人展'}],cur:1,seq:1,products:[],
 orders:[],rules:{full:[],buy:[]},nid:10};
 try{const r=localStorage.getItem(KEY);if(r)S=JSON.parse(r)}catch(e){}
@@ -366,7 +271,7 @@ const lsave=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast(
 const save=()=>{lsave();qstate()};
 /* ---- sync (Supabase) ---- */
 const QK=KEY+'_q';let Q=[];try{Q=JSON.parse(localStorage.getItem(QK)||'[]')}catch(e){}
-const VER='v9.3.13 Friends · 2026-10-13';
+const VER='v9.3.11 · 2026-10-13';
 let sb=null,USER=null,chan=null,flushing=false,ft=null,pt=null,PR=false,SYNERR=false,SYNMSG='',IMGERR='',LASTSIG='';
 let REMOTE_PENDING=new Set(),REMOTE_DONE=new Set(),LOCAL_DONE=new Map(),PENDING_TABLE_OK=true,pendingFetchBusy=false,lastPendingFetch=0;
 let PENDING_RETRY_AT=0, pendingErrorCount=0;
@@ -506,7 +411,7 @@ async function startSync(){
  }
  subscribe();fetchRemotePending();setSync();
 }
-async function initSB(){if(!SB_URL||!SB_KEY){friendSetup();return}if(!window.supabase){SYNERR=true;SYNMSG='Supabase 程式庫未載入';setSync();return}
+async function initSB(){if(!SB_URL||!SB_KEY||!window.supabase){SYNERR=true;SYNMSG='Supabase 程式庫未載入';setSync();return}
 sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
 try{const {data}=await sb.auth.getSession();if(data.session){USER=data.session.user;await startSync()}else $('#login').classList.add('on')}catch(e){}
 sb.auth.onAuthStateChange((ev)=>{if(ev=='SIGNED_OUT'){USER=null;if(chan){sb.removeChannel(chan);chan=null}setSync();if(cur==3)r3()}});
@@ -515,9 +420,9 @@ window.addEventListener('online',()=>{if(USER){slog('偵測到恢復網路，重
 setInterval(()=>{if(cur===0&&(REMOTE_DONE.size||LOCAL_DONE.size)){completedProductIds();if(cur===0)r0()}if(USER&&!document.hidden&&navigator.onLine){if(Q.length)flush().then(()=>{pull();fetchRemotePending()});else if(!flushing)pull();fetchRemotePending()}},2000)}
 async function doLogin(mode){const e=$('#lg_e').value.trim(),p=$('#lg_p').value,m=$('#lg_m');if(!e||p.length<6){m.textContent='請輸入信箱與至少 6 碼密碼';return}
 m.style.color='var(--sub)';m.textContent='處理中…';
-try{const r=await sb.auth.signInWithPassword({email:e,password:p});
+try{const r=mode=='up'?await sb.auth.signUp({email:e,password:p}):await sb.auth.signInWithPassword({email:e,password:p});
 if(r.error){m.style.color='var(--red)';m.textContent=r.error.message;return}
-if(!r.data.session){m.style.color='var(--red)';m.textContent='登入失敗，請確認帳號設定';return}
+if(!r.data.session){m.textContent='註冊成功，請到信箱點驗證連結後再登入';return}
 USER=r.data.session.user;$('#login').classList.remove('on');startSync();if(cur==3)r3()}catch(x){m.style.color='var(--red)';m.textContent='連線失敗，請檢查網路'}}
 async function doLogout(){if(!await ask('確認登出？'))return;await sb.auth.signOut();USER=null;if(chan){sb.removeChannel(chan);chan=null}r3()}
 async function forceUp(){if(!await ask('確認用這台的資料覆蓋雲端？其他裝置同步後會變得和這台一樣。','覆蓋'))return;try{localStorage.setItem(KEY+'_j',USER.id)}catch(e){}qreset();toast('上傳中…')}
@@ -694,10 +599,6 @@ ${rowIO('銷售資料','.json,application/json','impS','expS()')}
 </div>
 <div class="cap">商品資料可匯入 CSV（名稱,價格,庫存）或本 App 匯出的檔案，同名商品會更新。</div>
 <div class="sec">帳號與同步</div><div class="grp">${accHtml()}</div>
-<div class="sec">朋友專用資料庫設定</div><div class="grp">
-<div class="li"><span>目前 Supabase 專案</span><span style="font-size:12px;color:var(--sub)">${SB_URL?esc(new URL(SB_URL).hostname.split('.')[0]):'未設定'}</span></div>
-<div class="li" onclick="friendCfgLink()"><span>複製設定連結（給自己的其他裝置）</span>${I.chev}</div>
-<div class="li" onclick="friendResetCfg()"><span>切換 Supabase 專案</span>${I.chev}</div></div>
 <div class="sec">使用量</div><div class="grp">
 <div class="li"><span class="sub" style="margin:0">照片</span><span id="uph" style="font-size:14px">計算中…</span></div>
 <div class="li"><span class="sub" style="margin:0">資料</span><span id="udt" style="font-size:14px">計算中…</span></div>
