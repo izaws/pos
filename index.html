@@ -221,6 +221,13 @@ input,select,textarea{font-size:16px!important}
 .pk{max-height:calc(94dvh - 280px);min-height:120px}
 .sbody.two .pk{max-height:calc((94dvh - 350px)/2);min-height:110px}
 .gcard{border-radius:16px;overflow:hidden;margin:0 0 8px}.gcard .in{background:var(--card)}
+/* v9 */
+#bar{bottom:0;padding-bottom:calc(var(--tb) + 68px + 10px)}
+.card.in .im{box-shadow:0 0 0 2.5px var(--red)}
+.minus{right:0;top:0;transform:translate(50%,-50%);width:30px;height:30px;border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.2);z-index:3}
+.qb{right:0;bottom:0;transform:translate(50%,50%);z-index:3}
+.sbody.rl{display:flex;flex-direction:column}
+.sbody.rl .pk{flex:1 1 0;min-height:140px;max-height:none}
 /* product grid drag handle */
 .gh{position:absolute;right:6px;top:6px;background:rgba(255,255,255,.88);color:var(--tx);border-radius:8px;padding:4px;z-index:2;margin:0}
 </style></head><body>
@@ -260,8 +267,9 @@ const lsave=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast(
 const save=()=>{lsave();qstate()};
 /* ---- sync (Supabase) ---- */
 const QK=KEY+'_q';let Q=[];try{Q=JSON.parse(localStorage.getItem(QK)||'[]')}catch(e){}
-const VER='v7 · 2026-10-13';
+const VER='v9 · 2026-10-13';
 let sb=null,USER=null,chan=null,flushing=false,ft=null,pt=null,PR=false,SYNERR=false,SYNMSG='',IMGERR='',LASTSIG='';
+const SL=[];let RTS='',ASKING=false;const slog=m=>{SL.push(new Date().toTimeString().slice(0,8)+' '+m);if(SL.length>25)SL.shift()};
 const errMsg=e=>(e&&(e.message||e.error_description||e.code))||String(e||'未知錯誤');
 const saveQ=()=>{try{localStorage.setItem(QK,JSON.stringify(Q))}catch(e){}};
 function setSync(){const el=document.getElementById('syn');if(el)el.textContent=!USER?'未登入':!navigator.onLine?'離線，恢復網路後自動同步':SYNERR?'同步失敗：'+SYNMSG+'（稍後自動重試）':Q.length?'同步中…（'+Q.length+'）':IMGERR?'已同步（圖片上傳失敗：'+IMGERR+'）':'已同步';const e2=document.getElementById('syn2');if(e2)e2.textContent=S.orders.length+' 筆訂單／'+S.products.length+' 個商品'}
@@ -280,23 +288,25 @@ else if(op.t=='o'){const o=S.orders.find(x=>x.id==op.id);if(o)r=await sb.from('p
 else if(op.t=='od')r=await sb.from('pos_orders').delete().eq('user_id',USER.id).eq('id',op.id);
 else if(op.t=='oev')r=await sb.from('pos_orders').delete().eq('user_id',USER.id).eq('ev',op.ev);
 else if(op.t=='reset')r=await sb.from('pos_orders').delete().eq('user_id',USER.id);
-if(r&&r.error)throw r.error;Q.shift();saveQ()}
-SYNERR=false;SYNMSG=''}catch(e){SYNERR=true;SYNMSG=errMsg(e);setTimeout(flush,15000)}
+if(r&&r.error)throw r.error;slog('上傳 '+op.t+(op.id?' '+op.id:'')+' 成功');Q.shift();saveQ()}
+SYNERR=false;SYNMSG=''}catch(e){SYNERR=true;SYNMSG=errMsg(e);slog('上傳失敗：'+SYNMSG);setTimeout(flush,15000)}
 flushing=false;setSync()}
 function applyRemote(d,rows){const cur=S.cur;S.events=d.events&&d.events.length?d.events:S.events;S.products=d.products||[];S.groups=d.groups||[];S.works=d.works||S.works||[];S.rules=d.rules||{full:[],buy:[]};S.nid=Math.max(S.nid||10,d.nid||10);S.orders=rows.map(r=>r.data).sort((a,b)=>b.time-a.time);migOrders();migProds();if(!S.events.some(e=>e.id==cur))S.cur=S.events[0].id;Object.keys(cart).forEach(id=>{if(!P(id)){delete cart[id];delete gift[id]}});lsave()}
 async function pull(force){if(!sb||!USER||Q.length||flushing)return;
 try{const [a,b]=await Promise.all([sb.from('pos_state').select('data').maybeSingle(),sb.from('pos_orders').select('data').order('id',{ascending:false})]);if(a.error||b.error)throw (a.error||b.error);
 const jf=KEY+'_j',joined=localStorage.getItem(jf)==USER.id,mark=()=>{try{localStorage.setItem(jf,USER.id)}catch(e){}};
-if(!a.data){Q.push({t:'state'});S.orders.forEach(o=>Q.push({t:'o',id:o.id}));saveQ();mark();flush();return}
+if(!a.data){slog('雲端沒有資料，上傳本機資料');Q.push({t:'state'});S.orders.forEach(o=>Q.push({t:'o',id:o.id}));saveQ();mark();flush();return}
 if(Q.length)return;
+if(!joined&&!force&&!ASKING){const cp=a.data.data.products||[],ids=x=>x.map(y=>y.id).sort().join(),pristine=!S.orders.length&&ids(S.products)=='1,2,3';
+if(!pristine&&(ids(S.products)!=ids(cp)||ids(S.orders)!=ids(b.data.map(r=>r.data)))){ASKING=true;const useLocal=await ask(`這台的資料和雲端不同。本機：${S.products.length} 項商品、${S.orders.length} 筆訂單；雲端：${cp.length} 項商品、${b.data.length} 筆訂單。按「用這台覆蓋雲端」會上傳這台的資料；按取消則以雲端為準（這台獨有的訂單會保留）。`,'用這台覆蓋雲端');ASKING=false;if(useLocal){mark();qreset();slog('選擇：用這台覆蓋雲端');return}}}
 const sig=JSON.stringify([a.data.data,b.data]);if(!force&&joined&&sig===LASTSIG){SYNERR=false;setSync();return}
 const have=new Set(b.data.map(r=>r.data.id)),lo=(joined||force)?[]:S.orders.filter(o=>!have.has(o.id));
-applyRemote(a.data.data,b.data);LASTSIG=sig;
+applyRemote(a.data.data,b.data);LASTSIG=sig;slog('下載：雲端 '+S.products.length+' 項商品、'+S.orders.length+' 筆訂單，已套用');
 if(lo.length){lo.forEach(o=>{S.orders.push(o);Q.push({t:'o',id:o.id})});S.orders.sort((x,y)=>y.time-x.time);saveQ();lsave();flushSoon()}
 mark();
-const busy=['#md_m','#co_m','#ied'].some(x=>document.querySelector(x).classList.contains('on'));if(busy)PR=true;else render();SYNERR=false;setSync()}catch(e){SYNERR=true;SYNMSG=errMsg(e);setSync()}}
+const busy=['#md_m','#co_m','#ied'].some(x=>document.querySelector(x).classList.contains('on'));if(busy)PR=true;else render();SYNERR=false;setSync()}catch(e){SYNERR=true;SYNMSG=errMsg(e);slog('下載失敗：'+SYNMSG);setSync()}}
 function pullSoon(){clearTimeout(pt);pt=setTimeout(pull,600)}
-function subscribe(){if(chan||!sb)return;chan=sb.channel('pos-'+USER.id).on('postgres_changes',{event:'*',schema:'public',table:'pos_state'},pullSoon).on('postgres_changes',{event:'*',schema:'public',table:'pos_orders'},pullSoon).subscribe()}
+function subscribe(){if(chan||!sb)return;chan=sb.channel('pos-'+USER.id).on('postgres_changes',{event:'*',schema:'public',table:'pos_state'},pullSoon).on('postgres_changes',{event:'*',schema:'public',table:'pos_orders'},pullSoon).subscribe(st=>{RTS=st;slog('即時連線：'+st)})}
 async function startSync(){setSync();await flush();await pull();subscribe();setSync()}
 async function initSB(){if(!SB_URL||!SB_KEY||!window.supabase)return;
 sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
@@ -314,10 +324,27 @@ USER=r.data.session.user;$('#login').classList.remove('on');startSync();if(cur==
 async function doLogout(){if(!await ask('確認登出？'))return;await sb.auth.signOut();USER=null;if(chan){sb.removeChannel(chan);chan=null}r3()}
 async function forceUp(){if(!await ask('確認用這台的資料覆蓋雲端？其他裝置同步後會變得和這台一樣。','覆蓋'))return;try{localStorage.setItem(KEY+'_j',USER.id)}catch(e){}qreset();toast('上傳中…')}
 async function forceDown(){if(!await ask('確認用雲端資料覆蓋這台？這台尚未上傳的資料會消失。','覆蓋'))return;Q=[];saveQ();let n=0;while(flushing&&n++<30)await new Promise(r=>setTimeout(r,300));await pull(true);toast('已用雲端資料更新')}
+async function syncDiag(){toast('檢查中…');const L=[],ok=t=>L.push('✅ '+t),ng=t=>L.push('❌ '+t),wn=t=>L.push('⚠️ '+t);
+L.push('版本　'+VER);L.push('專案　'+(SB_URL?SB_URL.replace('https://','').split('.')[0]:'未設定'));
+window.supabase?ok('Supabase 程式庫已載入'):ng('Supabase 程式庫沒有載入（網路不穩或被擋）');
+navigator.onLine?ok('目前有網路'):ng('目前離線');
+let cp=null,co=null;
+if(sb){try{const g=await sb.auth.getSession(),u=g.data&&g.data.session&&g.data.session.user;u?ok('已登入：'+u.email):ng('沒有登入（請到設定登入）');
+if(u){const a=await sb.from('pos_state').select('data,updated_at').maybeSingle();
+if(a.error)ng('讀取雲端商品失敗：'+errMsg(a.error));else if(a.data){cp=(a.data.data.products||[]).length;ok('雲端有資料：'+cp+' 項商品、'+(a.data.data.events||[]).length+' 個場次，更新於 '+new Date(a.data.updated_at).toLocaleString())}else wn('雲端還沒有資料');
+const b=await sb.from('pos_orders').select('id',{count:'exact',head:true});
+if(b.error)ng('讀取雲端訂單失敗：'+errMsg(b.error));else{co=b.count;ok('雲端訂單：'+co+' 筆')}
+const st=await sb.storage.from('product-images').list(u.id,{limit:1});st.error?ng('圖片空間錯誤：'+errMsg(st.error)):ok('圖片空間可使用')}}catch(e){ng('檢查時發生錯誤：'+errMsg(e))}}else ng('Supabase 尚未初始化');
+L.push('即時連線　'+(RTS||'未連線'));L.push('本機　'+S.products.length+' 項商品、'+S.orders.length+' 筆訂單');
+L.push('待上傳　'+Q.length+' 筆'+(Q.length?'（'+Q.slice(0,3).map(q=>q.t).join('、')+'…）':''));
+if(SYNERR)ng('最近一次同步錯誤：'+SYNMSG);if(IMGERR)wn('圖片上傳失敗：'+IMGERR);
+if(cp!=null&&(cp!=S.products.length||co!=S.orders.length))wn('本機與雲端數量不同，可在設定用「以這台資料覆蓋雲端」或「以雲端資料覆蓋這台」統一');
+const lg=SL.slice(-8).map(x=>'　'+x);if(lg.length){L.push('最近紀錄');L.push(...lg)}
+openM(`<h3>同步診斷</h3><div style="white-space:pre-wrap;font-size:13px;line-height:1.7;word-break:break-all">${esc(L.join('\n'))}</div><br><button class="btn" style="width:100%" onclick="syncDiag()">重新檢查</button>`)}
 function loginOpen(){$('#login').classList.add('on')}
 function accHtml(){if(!SB_URL)return'<div class="li"><span class="sub" style="margin:0">尚未設定 Supabase，資料只存在這台裝置</span></div>';
-if(!USER)return`<div class="li" onclick="loginOpen()"><span>登入以同步資料</span>${I.chev}</div>`;
-return`<div class="li"><span class="sub" style="margin:0">帳號</span><span style="font-size:14px">${esc(USER.email||'')}</span></div><div class="li"><span class="sub" style="margin:0">同步狀態</span><span id="syn" style="font-size:14px;max-width:62%;text-align:right;line-height:1.35"></span></div><div class="li"><span class="sub" style="margin:0">本機資料</span><span id="syn2" style="font-size:14px"></span></div><div class="li"><span class="sub" style="margin:0">程式版本</span><span style="font-size:14px">${VER}</span></div><div class="li" onclick="flush().then(pull)"><span>立即同步</span>${I.chev}</div><div class="li" onclick="forceUp()"><span>以這台資料覆蓋雲端</span>${I.chev}</div><div class="li" onclick="forceDown()"><span>以雲端資料覆蓋這台</span>${I.chev}</div><div class="li" onclick="doLogout()"><span style="color:var(--red)">登出</span></div>`}
+if(!USER)return`<div class="li" onclick="loginOpen()"><span>登入以同步資料</span>${I.chev}</div><div class="li" onclick="syncDiag()"><span>同步診斷</span>${I.chev}</div>`;
+return`<div class="li"><span class="sub" style="margin:0">帳號</span><span style="font-size:14px">${esc(USER.email||'')}</span></div><div class="li"><span class="sub" style="margin:0">同步狀態</span><span id="syn" style="font-size:14px;max-width:62%;text-align:right;line-height:1.35"></span></div><div class="li"><span class="sub" style="margin:0">本機資料</span><span id="syn2" style="font-size:14px"></span></div><div class="li"><span class="sub" style="margin:0">程式版本</span><span style="font-size:14px">${VER}</span></div><div class="li" onclick="flush().then(pull)"><span>立即同步</span>${I.chev}</div><div class="li" onclick="syncDiag()"><span>同步診斷</span>${I.chev}</div><div class="li" onclick="forceUp()"><span>以這台資料覆蓋雲端</span>${I.chev}</div><div class="li" onclick="forceDown()"><span>以雲端資料覆蓋這台</span>${I.chev}</div><div class="li" onclick="doLogout()"><span style="color:var(--red)">登出</span></div>`}
 let cart={},gift={},disc=0,recv='',cur=0,filter='all',GQ={};
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const P=id=>S.products.find(p=>p.id==id);
@@ -397,7 +424,7 @@ save();qo(oid);cart={};gift={};GQ={};disc=0;recv='';closeM();$('#co_m').classLis
 const fmt=t=>{const d=new Date(t);return d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
 let OEV=null;
 const itx=o=>o.items.map(i=>esc(i.name)+'x'+i.qty+(i.gift?'(贈)':'')).join('、');
-const orem=o=>{const seen=new Set(),a=[];o.items.forEach(i=>{if(seen.has(i.pid))return;seen.add(i.pid);a.push(remOf(P(i.pid),o.ev))});return a.some(v=>v!=null)?'餘 '+a.map(v=>v==null?'—':v).join('/'):''};
+const oremD=o=>{const seen=new Set(),a=[];o.items.forEach(i=>{if(seen.has(i.pid))return;seen.add(i.pid);const v=remOf(P(i.pid),o.ev);if(v!=null)a.push(esc(i.name)+' '+v)});return a.length?`<div class="sub" style="margin:0 2px 10px">目前餘量　${a.join('｜')}</div>`:''};
 const pills=o=>{const a=[],rw=o.rw||[];a.push(o.type=='pre'?`<span class="pill ${o.status=='準備中'?'p':o.status=='待取貨'?'q':''}">${o.status}</span>`:'<span class="pill s">已完成</span>');if(rw.some(x=>x.startsWith('消費禮')))a.push('<span class="pill gf">含消費禮</span>');if(rw.some(x=>x.startsWith('滿')))a.push('<span class="pill gf">含滿額禮</span>');return a.join('')};
 function r1(){const ev=OEV==null?S.cur:OEV,ck=`<span class="ck">${I.check}</span>`;
 const os=S.orders.filter(o=>ev=='all'||o.ev==ev),live=os.filter(o=>o.status!='已取消'),sales=live.reduce((a,o)=>a+o.total,0),cost=live.reduce((a,o)=>a+oc(o),0);
@@ -409,7 +436,7 @@ $('#p1').innerHTML=`<div class="ph"><h1 style="text-align:left;flex:1">訂單</h
 <div class="chips">${fl.map(f=>`<button class="chip ${filter==f[0]?'on':''}" onclick="filter='${f[0]}';r1()">${f[1]}</button>`).join('')}</div>
 ${vis.map(o=>`<div class="sw" data-id="${o.id}"><button class="del" onclick="delO(${o.id})">刪除</button><div class="in" onclick="detail(${o.id})">
 <div class="row"><span class="ot"><b>#${o.no}</b>${pills(o)}</span><b style="font-size:16px;flex:none;margin-left:8px">$ ${o.total}</b></div>
-<div class="row" style="align-items:flex-start;margin-top:3px"><span class="sub" style="margin:0;flex:1;min-width:0;word-break:break-all">${fmt(o.time)}　${itx(o)}${rcv(o)>o.total?'｜找零 $'+(rcv(o)-o.total):''}${o.note?'｜'+esc(o.note):''}</span><span class="sub" style="margin:0 0 0 8px;flex:none;white-space:nowrap">${orem(o)}</span></div></div></div>`).join('')||'<div class="empty">還沒有紀錄</div>'}`;swipe()}
+<div class="sub" style="word-break:break-all">${fmt(o.time)}　${itx(o)}${rcv(o)>o.total?'｜找零 $'+(rcv(o)-o.total):''}${o.note?'｜'+esc(o.note):''}</div></div></div>`).join('')||'<div class="empty">還沒有紀錄</div>'}`;swipe()}
 function swipe(r){document.querySelectorAll((r||'')+'.sw').forEach(el=>{let x0=null,moved=false,wasOpen=false;
 el.addEventListener('pointerdown',e=>{x0=e.clientX;moved=false;wasOpen=el.classList.contains('open')});
 el.addEventListener('pointermove',e=>{if(x0===null)return;const dx=e.clientX-x0;if(Math.abs(dx)>20)moved=true;if(dx<-40){document.querySelectorAll('.sw.open').forEach(s=>s!==el&&s.classList.remove('open'));el.classList.add('open');x0=null}else if(dx>40){el.classList.remove('open');x0=null}});
@@ -424,6 +451,7 @@ ${o.type=='pre'?`<div class="grp" style="padding:2px 16px;margin-top:10px"><div 
 ${o.items.map(i=>`<div class="li"><span>${esc(i.name)} ×${i.qty}${i.gift?' '+I.gift+esc(i.rule||'轉贈'):''}</span><span>${i.gift?'$0':'$'+i.price*i.qty}</span></div>`).join('')}
 ${o.disc?`<div class="li"><span>手動優惠</span><span>−$${o.disc}</span></div>`:''}
 <div class="li"><b>已收</b><b>$${rv}</b></div>${rv>o.total?`<div class="li"><span>找零</span><span>$${rv-o.total}</span></div>`:''}</div>
+${oremD(o)}
 ${o.rw&&o.rw.length?`<div class="rm" style="margin-bottom:10px">${o.rw.map(x=>I.gift+' '+esc(x)).join('<br>')}</div>`:''}
 ${nxt?`<div class="row" style="gap:10px">${prv?`<button class="btn o" style="flex:1" onclick="setSt(${o.id},'${prv}')">更改為【${prv}】</button>`:''}<button class="btn" style="flex:1" onclick="setSt(${o.id},'${nxt}')">更新為「${nxt}」</button></div>`:prv?`<button class="btn o" style="width:100%" onclick="setSt(${o.id},'${prv}')">更改為【${prv}】</button>`:''}`)}
 function setSt(id,s){S.orders.find(o=>o.id==id).status=s;save();qo(id);closeM();r1()}
@@ -434,7 +462,7 @@ function pList(){const q=PQ.trim().toLowerCase(),ps=evP().filter(p=>(!q||p.name.
 const bg=p=>p.img?`background-image:url(${p.img})`:'';
 if(PG=='grid')return`<div class="grid" style="margin-top:12px">${ps.map((p,i)=>`<div class="card" onclick="prodEd(${p.id})"><div class="imw"><div class="im" style="${bg(p)}">${p.img?'':I.gift}</div><span class="hd gh" style="touch-action:none" onpointerdown="event.stopPropagation();gDrag(event,${i})" onclick="event.stopPropagation()">${I.menu}</span></div><div class="nm">${esc(p.name)}</div><div class="pr">$ ${fmt2(p.price)}</div></div>`).join('')}</div>`;
 return ps.map((p,i)=>`<div class="sw pw s2"><button class="cp2" onclick="prodCopy(${p.id})">複製</button><button class="del" onclick="delP(${p.id})">刪除</button><div class="in" onclick="prodEd(${p.id})"><div class="rw" style="gap:12px"><span class="tn" style="${bg(p)}">${p.img?'':I.gift}</span><span class="pn">${esc(p.name)}${p.off?' <span class="sub">（下架）</span>':''}${p.combo?`<br><span class="sub">set・${p.combo.length} 項</span>`:sk(p)!=null?`<br><span class="sub">庫存: ${sk(p)}</span>`:''}</span><span class="pp">$ ${fmt2(p.price)}</span><span class="hd" onpointerdown="event.stopPropagation();pDrag(event,${i})" onclick="event.stopPropagation()">${I.menu}</span></div></div></div>`).join('')}
-function r2(){$('#p2').innerHTML=`<div class="ph"><button class="dkb" onclick="grpM()">${I.filter}</button><h1>商品管理</h1><button class="rb" onclick="event.stopPropagation();$('#pm').classList.toggle('on')">${I.plus}</button><div id="pm" class="pm" onclick="event.stopPropagation()"><div class="mi2" onclick="$('#pm').classList.remove('on');prodEd(0)">${I.box}新增商品</div><div class="mi2" onclick="$('#pm').classList.remove('on');prodEd(0,1)">${I.layers}新增set</div><div class="mi2" onclick="$('#pm').classList.remove('on');pAddFrom()">${I.list}從其他場次加入</div></div></div>
+function r2(){$('#p2').innerHTML=`<div class="ph"><button class="dkb" onclick="grpM()">${I.filter}</button><h1>商品管理</h1><button class="rb" onclick="event.stopPropagation();$('#pm').classList.toggle('on')">${I.plus}</button><div id="pm" class="pm" onclick="event.stopPropagation()"><div class="mi2" onclick="$('#pm').classList.remove('on');prodEd(0)">${I.pkg}新增商品</div><div class="mi2" onclick="$('#pm').classList.remove('on');prodEd(0,1)">${I.cstar}新增set</div></div></div>
 <div class="row" style="margin:-2px 0 10px;gap:10px"><span class="sub" style="margin:0">庫存依場次分開計算</span><div style="position:relative"><button class="evb" onclick="event.stopPropagation();$('#pem').classList.toggle('on')"><span>${esc(evName())}</span>${I.tri}</button><div id="pem" class="dm" onclick="event.stopPropagation()"><div class="cap0">切換場次</div>${S.events.map(e=>`<div class="mi" onclick="S.cur=${e.id};save();render()"><span>${esc(e.name)}</span>${e.id==S.cur?`<span class="ck">${I.check}</span>`:''}</div>`).join('')}</div></div></div>
 <div class="srch">${I.search}<input id="pq" placeholder="搜尋名稱" value="${esc(PQ)}" oninput="PQ=this.value;$('#pl').innerHTML=pList();swipe('#pl ')"></div>
 <div class="row" style="margin-bottom:12px;gap:10px"><div class="chips" style="margin:0;flex:1;min-width:0">${['',...S.groups].map((g,i)=>`<button class="chip ${g==PGF?'on':''}" onclick="PGF=${i?`S.groups[${i-1}]`:"''"};r2()">${i?esc(g):'全部'}</button>`).join('')}</div><button class="rb" style="background:var(--ln);border:0" onclick="PG=PG=='list'?'grid':'list';r2()">${PG=='list'?I.grid:I.list2}</button></div><div id="pl">${pList()}</div>`;swipe('#pl ')}
@@ -485,7 +513,7 @@ let RU=null;
 const pickH=(key,items,sel)=>`<div class="pk">${items.map(x=>`<div class="pki ${x.id==sel?'on':''}" onclick="pk(this,'${key}',${x.id})"><span>${esc(x.name)}</span>${x.id==sel?I.check:''}</div>`).join('')||'<div class="empty" style="padding:16px">先到商品管理新增商品</div>'}</div>`;
 function pk(el,key,id){RU[key]=id;[...el.parentNode.children].forEach(c=>{c.classList.remove('on');const ic=c.querySelector('.ic');if(ic)ic.remove()});el.classList.add('on');el.insertAdjacentHTML('beforeend',I.check)}
 function ruleEd(k,i){const r=i>=0?S.rules[k][i]:{};RU={k,i,amt:r.amt||'',gid:r.gid||0,pid:r.pid||0};TALL=1;ANI=1;
-openM(`<div class="sh row"><button class="p2" onclick="closeM()">取消</button><b style="font-size:17px">${i>=0?'編輯':'新增'}${k=='full'?'滿額禮':'消費禮'}</b><button class="p2" onclick="ruleSave()">保存</button></div><div class="sbody${k=='buy'?' two':''}">
+openM(`<div class="sh row"><button class="p2" onclick="closeM()">取消</button><b style="font-size:17px">${i>=0?'編輯':'新增'}${k=='full'?'滿額禮':'消費禮'}</b><button class="p2" onclick="ruleSave()">保存</button></div><div class="sbody rl">
 ${k=='full'?`<div class="sub" style="margin:0 0 6px">達到金額</div><div class="fld"><span class="sub">$</span><input type="number" inputmode="numeric" placeholder="例如 300" value="${esc(RU.amt)}" oninput="RU.amt=this.value"></div>`:`<div class="sub" style="margin:0 0 6px">購買商品</div>${pickH('pid',[{id:0,name:'任一消費'},...S.products],RU.pid)}`}
 <div class="sub" style="margin:16px 0 6px">贈送商品（從商品管理選擇）</div>${pickH('gid',S.products,RU.gid)}
 ${i>=0?`<button class="btn o" style="width:100%;margin-top:16px;color:var(--red)" onclick="ruleDel()">刪除</button>`:''}</div>`)}
@@ -589,8 +617,6 @@ const cx=rc[i].left+rc[i].width/2+dx,cy=rc[i].top+rc[i].height/2+dy;let best=1e9
 cards.forEach((c,k)=>{if(k==i)return;let src=k;if(k>i&&k<=to)src=k-1;else if(k<i&&k>=to)src=k+1;
 c.style.transform=src==k?'':'translate('+(rc[src].left-rc[k].left)+'px,'+(rc[src].top-rc[k].top)+'px)'})};
 h.onpointerup=h.onpointercancel=()=>{h.onpointermove=null;if(to==i){r2();return}reorderP(ps,i,to)}}
-function pAddFrom(){const ps=S.products.filter(p=>!inEv(p));openM(`<h3>從其他場次加入</h3><div class="sub" style="margin:-6px 0 10px">圖片共用，不會多佔空間；庫存先沿用其他場次的數字，可再個別修改</div>${ps.length?`<div class="grp" style="padding:0 14px;max-height:50vh;overflow:auto">${ps.map(p=>`<label class="li"><span class="rw" style="gap:10px"><span class="tn" style="${p.img?`background-image:url(${p.img})`:''}">${p.img?'':I.gift}</span>${esc(p.name)}</span><input type="checkbox" class="pfc" value="${p.id}" style="width:22px;height:22px;flex:none;padding:0"></label>`).join('')}</div><br><button class="btn" style="width:100%" onclick="pAddOk()">加入「${esc(evName())}」</button>`:'<div class="empty">所有商品都已在這個場次</div>'}`)}
-function pAddOk(){const ids=[...document.querySelectorAll('.pfc:checked')].map(x=>+x.value);if(!ids.length)return toast('請選擇商品');ids.forEach(id=>{const p=P(id);if(!p.evs)p.evs={};const v=Object.values(p.evs).find(x=>x!=null);p.evs[S.cur]=v==null?null:v});save();closeM();render();toast('已加入 '+ids.length+' 項商品')}
 function prodCopy(id){const i=S.products.findIndex(p=>p.id==id);if(i<0)return;const c=JSON.parse(JSON.stringify(S.products[i]));c.id=Date.now();c.name+=' 複製';S.products.splice(i+1,0,c);save();render();toast('已複製商品')}
 async function delP(id){if(await ask('確認刪除？'))rmP(id)}
 function rmP(id){S.products=S.products.filter(p=>p.id!=id);S.products.forEach(p=>{if(p.combo)p.combo=p.combo.filter(c=>c.pid!=id)});delete cart[id];delete gift[id];save();closeM();render()}
@@ -612,7 +638,8 @@ link:sv('M3.900 12a3.100 3.100 0 0 1 3.100-3.100h4V7H7a5 5 0 0 0 0 10h4v-1.900H7
 people:sv('M16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-8 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 2c-2.300 0-7 1.200-7 3.500V19h14v-2.500C15 14.200 10.300 13 8 13zm8 0c-.3 0-.6 0-1 .1 1.200.9 2 2 2 3.400V19h6v-2.500c0-2.300-4.700-3.500-7-3.500z'),
 scan:sv('M3 3h6v2H5v4H3V3zm12 0h6v6h-2V5h-4V3zM3 15h2v4h4v2H3v-6zm16 0h2v4h-4v2h6v-6zM7 11h10v2H7z'),
 help:sv('M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 17h-2v-2h2v2zm2.100-7.800-.9.9c-.7.7-1.200 1.300-1.200 2.900h-2v-.5c0-1.100.5-2.100 1.200-2.800l1.200-1.300c.4-.3.6-.8.6-1.400 0-1.100-.9-2-2-2s-2 .9-2 2H8a4 4 0 0 1 8 0c0 .9-.4 1.700-.9 2.200z')};
-document.querySelectorAll('#tabs button span').forEach((s,i)=>s.innerHTML=I[['reg','list','box','gear'][i]]);
+I.pkg='<svg class="ic" viewBox="0 -960 960 960"><path d="M440-91v-366L120-642v321q0 22 10.5 40t29.5 29L440-91Zm80 0 280-161q19-11 29.5-29t10.5-40v-321L520-457v366Zm159-550 118-69-277-159q-19-11-40-11t-40 11l-79 45 318 183ZM480-526l119-68-317-184-120 69 318 183Z"/></svg>';I.cstar='<svg class="ic" viewBox="0 -960 960 960"><path d="m489-460 91-55 91 55-24-104 80-69-105-9-42-98-42 98-105 9 80 69-24 104ZM228-85q-33 5-59.5-15.5T138-154L85-591q-4-33 16-59t53-30l46-6v326q0 66 47 113t113 47h372q-6 24-24 41.5T664-138L228-85Zm132-195q-33 0-56.5-23.5T280-360v-440q0-33 23.5-56.5T360-880h440q33 0 56.5 23.5T880-800v440q0 33-23.5 56.5T800-280H360Z"/></svg>';
+document.querySelectorAll('#tabs button span').forEach((s,i)=>s.innerHTML=I[['reg','list','pkg','gear'][i]]);
 
 /* ---- color ---- */
 const COLORS=['','#cf490e','#6b6b70','#8c8c91','#b3aca1','#1f1f21'];
@@ -628,7 +655,7 @@ function readT(f,fn){if(!f)return;const r=new FileReader();r.onload=()=>{try{fn(
 const readJ=(f,fn)=>readT(f,t=>fn(JSON.parse(t)));
 function expA(){dl('全部資料-'+dstr()+'.json',JSON.stringify({type:'all',events:S.events,products:S.products,groups:S.groups,works:S.works,rules:S.rules,orders:S.orders,nid:S.nid}),'application/json')}
 function impA(f){readJ(f,j=>{if(!Array.isArray(j.products)||!Array.isArray(j.orders))throw 0;impAdo(j)})}
-async function impAdo(j){if(!await ask('將取代目前所有資料（'+j.products.length+' 項商品、'+j.orders.length+' 筆訂單），確認匯入？','匯入'))return;
+async function impAdo(j){if(!await ask('匯入後會取代目前所有資料（'+j.products.length+' 項商品、'+j.orders.length+' 筆訂單），此動作無法復原，確定要匯入嗎？','匯入'))return;
 S.events=j.events&&j.events.length?j.events:S.events;S.products=j.products;S.groups=j.groups||[];S.works=j.works||[];S.rules=j.rules||{full:[],buy:[]};S.orders=j.orders;migOrders();migProds();S.nid=j.nid||S.nid;if(!S.events.some(e=>e.id==S.cur))S.cur=S.events[0].id;cart={};gift={};disc=0;save();if(SB_URL)qreset();render();toast('已匯入全部資料')}
 function expP(){dl('商品資料-'+dstr()+'.json',JSON.stringify({type:'products',groups:S.groups,works:S.works,products:S.products}),'application/json')}
 function expE(){dl('場次資料-'+dstr()+'.json',JSON.stringify({type:'events',events:S.events}),'application/json')}
@@ -637,10 +664,10 @@ function expSJson(){closeM();dl('銷售資料-'+dstr()+'.json',JSON.stringify({t
 function expSCsv(){closeM();const en=id=>(S.events.find(e=>e.id==id)||{}).name||'';const rows=[['場次','單號','時間','類型','狀態','暱稱','社群連結','品項','優惠','應收','已收','找零','成本']];
 S.orders.slice().reverse().forEach(o=>rows.push([en(o.ev),o.no,fmt(o.time),o.type=='pre'?'預購':'結帳',o.status,o.note||'',o.link||'',o.items.map(i=>i.name+'x'+i.qty+(i.gift?'(送)':'')).join(' / '),o.disc,o.total,rcv(o),Math.max(0,rcv(o)-o.total),oc(o)]));
 dl('銷售資料-'+dstr()+'.csv','\ufeff'+rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n'),'text/csv')}
-function impE(f){readJ(f,j=>{if(!Array.isArray(j.events))throw 0;let n=0;j.events.forEach(e=>{if(e&&e.name&&!S.events.some(x=>x.name==e.name)){S.events.push({id:Date.now()+n,name:e.name});n++}});save();render();toast('已匯入 '+n+' 個場次')})}
-function impS(f){readJ(f,j=>{if(!Array.isArray(j.orders))throw 0;const em={};let k=0;(j.events||[]).forEach(e=>{let x=S.events.find(y=>y.name==e.name);if(!x){x={id:Date.now()+(k++),name:e.name};S.events.push(x)}em[e.id]=x.id});
+async function impE(f){if(!f)return;if(!await ask('匯入會把檔案中的場次加進目前資料（名稱相同的不會重複），確定要匯入嗎？','匯入'))return;readJ(f,j=>{if(!Array.isArray(j.events))throw 0;let n=0;j.events.forEach(e=>{if(e&&e.name&&!S.events.some(x=>x.name==e.name)){S.events.push({id:Date.now()+n,name:e.name});n++}});save();render();toast('已匯入 '+n+' 個場次')})}
+async function impS(f){if(!f)return;if(!await ask('匯入會把檔案中的訂單加進目前資料（已存在的訂單不會重複），確定要匯入嗎？','匯入'))return;readJ(f,j=>{if(!Array.isArray(j.orders))throw 0;const em={};let k=0;(j.events||[]).forEach(e=>{let x=S.events.find(y=>y.name==e.name);if(!x){x={id:Date.now()+(k++),name:e.name};S.events.push(x)}em[e.id]=x.id});
 const have=new Set(S.orders.map(o=>o.id));let n=0;j.orders.forEach(o=>{if(!o||have.has(o.id))return;o.ev=em[o.ev]??S.cur;S.orders.push(o);qo(o.id);n++});migOrders();S.orders.sort((a,b)=>b.time-a.time);save();render();toast('已匯入 '+n+' 筆訂單')})}
-function impP(f){readT(f,t=>{let n=0;
+async function impP(f){if(!f)return;if(!await ask('匯入商品會用檔案內容覆蓋「名稱相同」的商品（價格、圖片、庫存等），確定要匯入嗎？','匯入'))return;readT(f,t=>{let n=0;
 if(t[0]=='{'||t[0]=='['){const j=JSON.parse(t),arr=Array.isArray(j)?j:j.products;if(!Array.isArray(arr))throw 0;(j.groups||[]).forEach(g=>{if(!S.groups.includes(g))S.groups.push(g)});(j.works||[]).forEach(g=>{if(!S.works.includes(g))S.works.push(g)});
 const idm={},imp=[];arr.forEach(p=>{if(!p||!p.name||p.price==null||isNaN(+p.price))return;const ex=S.products.find(x=>x.name==p.name);let tgt;const stv=p.evs?(S.cur in p.evs?p.evs[S.cur]:(Object.values(p.evs).find(x=>x!=null)??null)):(p.stock??null);
 if(ex){const {id,evs,stock,...rest}=p;Object.assign(ex,rest);ex.evs=ex.evs||{};ex.evs[S.cur]=stv;tgt=ex}else{const id=p.id&&!S.products.some(x=>x.id==p.id)?p.id:Date.now()+n;const {evs,stock,...rp}=p;tgt={...rp,id,img:p.img||'',evs:{[S.cur]:stv}};S.products.push(tgt)}
