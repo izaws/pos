@@ -229,6 +229,8 @@ input,select,textarea{font-size:16px!important}
 /* Pending checkout badge: anchored to the image, not the card. */
 .pending-sale{position:absolute;left:50%;bottom:40px;transform:translateX(-50%);z-index:2;display:flex;align-items:center;gap:5px;white-space:nowrap;background:rgba(47,47,51,.8);color:#fff;border-radius:5px;padding:9px 12px;font-size:13px;font-weight:600;pointer-events:none;box-shadow:0 1px 5px rgba(0,0,0,.12)}
 .pending-sale svg{width:15px;height:15px;flex-shrink:0}
+.pending-sale{justify-content:center;text-align:center}
+.pending-sale.done{background:rgba(47,47,51,.8)}
 .sbody.rl{display:flex;flex-direction:column}
 .sbody.rl .pk{flex:1 1 0;min-height:140px;max-height:none}
 /* product grid drag handle */
@@ -270,9 +272,9 @@ const lsave=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast(
 const save=()=>{lsave();qstate()};
 /* ---- sync (Supabase) ---- */
 const QK=KEY+'_q';let Q=[];try{Q=JSON.parse(localStorage.getItem(QK)||'[]')}catch(e){}
-const VER='v9.3.5 · 2026-10-13';
+const VER='v9.3.6 · 2026-10-13';
 let sb=null,USER=null,chan=null,flushing=false,ft=null,pt=null,PR=false,SYNERR=false,SYNMSG='',IMGERR='',LASTSIG='';
-let REMOTE_PENDING=new Set(),PENDING_TABLE_OK=true,pendingFetchBusy=false,lastPendingFetch=0;
+let REMOTE_PENDING=new Set(),REMOTE_DONE=new Set(),LOCAL_DONE=new Map(),PENDING_TABLE_OK=true,pendingFetchBusy=false,lastPendingFetch=0;
 const SL=[];let RTS='',ASKING=false;const slog=m=>{SL.push(new Date().toTimeString().slice(0,8)+' '+m);if(SL.length>25)SL.shift()};
 const errMsg=e=>(e&&(e.message||e.error_description||e.code))||String(e||'未知錯誤');
 const saveQ=()=>{try{localStorage.setItem(QK,JSON.stringify(Q))}catch(e){}};
@@ -281,28 +283,34 @@ function qpush(op){if(!SB_URL)return;Q.push(op);saveQ();setSync();flushSoon()}
 function qstate(){if(!SB_URL)return;if(!Q.some(q=>q.t=='state')){Q.push({t:'state'});saveQ()}setSync();flushSoon()}
 const qo=id=>qpush({t:'o',id}),qod=id=>qpush({t:'od',id}),qoev=ev=>qpush({t:'oev',ev});
 function pendingProductIds(){const ids=new Set(REMOTE_PENDING);for(const q of Q){if(q.t!=='o'&&q.t!=='sale_state')continue;const o=S.orders.find(x=>String(x.id)===String(q.id));if(!o)continue;for(const i of o.items||[]){ids.add(String(i.pid));const p=P(i.pid);for(const c of (p&&p.combo)||[])ids.add(String(c.pid))}}return ids}
+function completedProductIds(){const ids=new Set(REMOTE_DONE);const now=Date.now();for(const [id,until] of LOCAL_DONE){if(until<=now)LOCAL_DONE.delete(id);else ids.add(id)}return ids}
+function markLocalCompleted(o){if(!o)return;const until=Date.now()+4000;for(const id of pendingIdsForOrder(o))LOCAL_DONE.set(id,until);if(cur===0)r0();setTimeout(()=>{if(cur===0)r0()},4100)}
 // Shared pending status. Requires the accompanying SQL migration. Failures never block checkout.
 const pendingIdsForOrder=o=>[...new Set((o.items||[]).flatMap(i=>{const p=P(i.pid);return [String(i.pid),...((p&&p.combo)||[]).map(c=>String(c.pid))]}))];
 async function fetchRemotePending(){
  if(!sb||!USER||!navigator.onLine||!PENDING_TABLE_OK||pendingFetchBusy)return;
  pendingFetchBusy=true;
- try{const {data,error}=await sb.from('pos_sync_pending').select('product_ids,expires_at').eq('user_id',USER.id).gt('expires_at',new Date().toISOString());
+ try{const {data,error}=await sb.from('pos_sync_pending').select('product_ids,expires_at,status,completed_at').eq('user_id',USER.id).gt('expires_at',new Date().toISOString());
   if(error)throw error;
-  const next=new Set((data||[]).flatMap(x=>(x.product_ids||[]).map(String)));
-  if(JSON.stringify([...next].sort())!==JSON.stringify([...REMOTE_PENDING].sort())){REMOTE_PENDING=next;if(cur===0)r0()}
-  lastPendingFetch=Date.now();
- }catch(e){PENDING_TABLE_OK=false;slog('跨裝置待同步需先執行 SQL：'+errMsg(e))}
+  const now=Date.now(),pending=new Set(),done=new Set();
+  for(const row of data||[]){const target=row.status==='done'?done:pending;for(const id of row.product_ids||[])target.add(String(id))}
+  const changed=JSON.stringify([[...pending].sort(),[...done].sort()])!==JSON.stringify([[...REMOTE_PENDING].sort(),[...REMOTE_DONE].sort()]);
+  REMOTE_PENDING=pending;REMOTE_DONE=done;
+  if(changed&&cur===0)r0();
+  lastPendingFetch=now;
+ }catch(e){PENDING_TABLE_OK=false;slog('跨裝置同步狀態讀取失敗，請執行 v9.3.6 SQL：'+errMsg(e))}
  finally{pendingFetchBusy=false}
 }
 async function publishPending(o){
  if(!sb||!USER||!PENDING_TABLE_OK)return;
- const {error}=await sb.from('pos_sync_pending').upsert({user_id:USER.id,order_id:String(o.id),product_ids:pendingIdsForOrder(o),expires_at:new Date(Date.now()+120000).toISOString()},{onConflict:'user_id,order_id'});
+ const {error}=await sb.from('pos_sync_pending').upsert({user_id:USER.id,order_id:String(o.id),product_ids:pendingIdsForOrder(o),status:'pending',completed_at:null,expires_at:new Date(Date.now()+120000).toISOString()},{onConflict:'user_id,order_id'});
  if(error)throw error;
 }
 async function completePending(id){
  if(!sb||!USER||!PENDING_TABLE_OK)return;
- // Remove the marker as soon as the order and inventory writes are acknowledged.
- const {error}=await sb.from('pos_sync_pending').delete().eq('user_id',USER.id).eq('order_id',String(id));
+ // Completed is a distinct truthful status; keep a brief event for other devices to see.
+ const now=new Date();
+ const {error}=await sb.from('pos_sync_pending').update({status:'done',completed_at:now.toISOString(),expires_at:new Date(now.getTime()+4000).toISOString()}).eq('user_id',USER.id).eq('order_id',String(id));
  if(error)throw error;
 }
 function qreset(){Q=[{t:'reset'},{t:'state'},...S.orders.map(o=>({t:'o',id:o.id}))];saveQ();flushSoon()}
@@ -317,7 +325,7 @@ else if(op.t=='o'){const o=S.orders.find(x=>x.id==op.id);if(o&&PENDING_TABLE_OK)
 else if(op.t=='od')r=await sb.from('pos_orders').delete().eq('user_id',USER.id).eq('id',op.id);
 else if(op.t=='oev')r=await sb.from('pos_orders').delete().eq('user_id',USER.id).eq('ev',op.ev);
 else if(op.t=='reset')r=await sb.from('pos_orders').delete().eq('user_id',USER.id);
-if(r&&r.error)throw r.error;slog('上傳 '+op.t+(op.id?' '+op.id:'')+' 成功');Q.shift();saveQ();if(op.t==='sale_state'&&PENDING_TABLE_OK){try{await completePending(op.id);await fetchRemotePending()}catch(e){slog('同步標記更新失敗：'+errMsg(e))}}if(op.t==='o'||op.t==='sale_state'){if(cur===0)r0();setSync()}}
+if(r&&r.error)throw r.error;slog('上傳 '+op.t+(op.id?' '+op.id:'')+' 成功');Q.shift();saveQ();if(op.t==='sale_state'&&PENDING_TABLE_OK){try{await completePending(op.id);markLocalCompleted(S.orders.find(x=>String(x.id)===String(op.id)));await fetchRemotePending()}catch(e){slog('同步標記更新失敗：'+errMsg(e))}}if(op.t==='o'||op.t==='sale_state'){if(cur===0)r0();setSync()}}
 SYNERR=false;SYNMSG=''}catch(e){SYNERR=true;SYNMSG=errMsg(e);slog('上傳失敗：'+SYNMSG);setTimeout(flush,15000)}
 flushing=false;setSync();if(PENDING_TABLE_OK&&navigator.onLine)fetchRemotePending()}
 function applyRemote(d,rows){const cur=S.cur;S.events=d.events&&d.events.length?d.events:S.events;S.products=d.products||[];S.groups=d.groups||[];S.works=d.works||S.works||[];S.rules=d.rules||{full:[],buy:[]};S.nid=Math.max(S.nid||10,d.nid||10);S.orders=rows.map(r=>r.data).sort((a,b)=>b.time-a.time);migOrders();migProds();if(!S.events.some(e=>e.id==cur))S.cur=S.events[0].id;Object.keys(cart).forEach(id=>{if(!P(id)){delete cart[id];delete gift[id]}});lsave()}
@@ -442,9 +450,9 @@ function render(){document.body.classList.toggle('w0',cur==0);[r0,r1,r2,r3][cur]
 function bar(){$('#tot').textContent='$ '+total();$('#goBtn').textContent='去結算 ('+cnt()+'件)';$('#goBtn').disabled=!cnt();if(WQ.matches&&cur==0)coR()}
 function r0(){
 $('#p0').innerHTML=`<div class="top"><img class="logo" src="${LOGO}" alt="" onerror="lgErr(this)"><div style="position:relative"><button class="evb" onclick="event.stopPropagation();$('#em').classList.toggle('on')"><span>${esc(evName())}</span>${I.tri}</button><div id="em" class="dm" onclick="event.stopPropagation()"><div class="cap0">切換場次</div>${S.events.map(e=>`<div class="mi" onclick="S.cur=${e.id};save();render()"><span>${esc(e.name)}</span>${e.id==S.cur?`<span class="ck">${I.check}</span>`:''}</div>`).join('')}</div></div></div>
-${S.groups.length?`<div class="chips">${['',...S.groups].map((g,i)=>`<button class="chip ${g==CG?'on':''}" onclick="CG=${i?`S.groups[${i-1}]`:"''"};r0()">${i?esc(g):'全部'}</button>`).join('')}</div>`:''}<div class="grid">${evP().filter(p=>p.hide!==true&&(!CG||p.group==CG)).map(p=>{const q=cart[p.id]||0,sv=sk(p),pending=pendingProductIds().has(String(p.id)),out=(sv!=null&&sv<=0)||p.off;
+${S.groups.length?`<div class="chips">${['',...S.groups].map((g,i)=>`<button class="chip ${g==CG?'on':''}" onclick="CG=${i?`S.groups[${i-1}]`:"''"};r0()">${i?esc(g):'全部'}</button>`).join('')}</div>`:''}<div class="grid">${evP().filter(p=>p.hide!==true&&(!CG||p.group==CG)).map(p=>{const q=cart[p.id]||0,sv=sk(p),pending=pendingProductIds().has(String(p.id)),done=!pending&&completedProductIds().has(String(p.id)),out=(sv!=null&&sv<=0)||p.off;
 return `<div class="card ${q?'in':''}" data-id="${p.id}" ${out?'style="opacity:.55"':''} onclick="add(${p.id})"><div class="imw"><div class="im" style="${p.img?`background-image:url(${p.img})`:''}">${p.img?'':I.gift}</div>
-${pending?`<div class="pending-sale"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>待同步</div>`:''}
+${pending?`<div class="pending-sale"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>待同步</span></div>`:done?`<div class="pending-sale done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg><span>同步完成</span></div>`:''}
 ${p.off?'<div class="stk z">已下架</div>':sv!=null?`<div class="stk ${out?'z':''}">${out?'售罄':sv}</div>`:''}
 ${q?`<button class="minus" onclick="event.stopPropagation();sub1(${p.id})">−</button><span class="qb">${q}</span>`:''}</div>
 <div class="nm">${esc(p.name)}</div><div class="pr">$ ${p.price}</div></div>`}).join('')||'<div class="empty">到「商品管理」新增商品</div>'}</div>`}
