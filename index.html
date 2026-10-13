@@ -223,9 +223,9 @@ input,select,textarea{font-size:16px!important}
 .gcard{border-radius:16px;overflow:hidden;margin:0 0 8px}.gcard .in{background:var(--card)}
 /* v9 */
 #bar{bottom:0;padding-bottom:calc(var(--tb) + 68px + 10px)}
-.card.in .im{box-shadow:0 0 0 2.5px var(--red)}
-.minus{right:0;top:0;transform:translate(50%,-50%);width:30px;height:30px;border:2.5px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.2);z-index:3}
-.qb{right:0;bottom:0;transform:translate(50%,50%);z-index:3}
+.card.in .im{box-shadow:0 0 0 2.5px var(--ac)}
+.minus{right:8px;top:8px;transform:none;width:28px;height:28px;border:0;box-shadow:0 1px 5px rgba(0,0,0,.2);z-index:3}
+.qb{right:8px;bottom:8px;transform:none;z-index:3}
 .sbody.rl{display:flex;flex-direction:column}
 .sbody.rl .pk{flex:1 1 0;min-height:140px;max-height:none}
 /* product grid drag handle */
@@ -267,7 +267,7 @@ const lsave=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast(
 const save=()=>{lsave();qstate()};
 /* ---- sync (Supabase) ---- */
 const QK=KEY+'_q';let Q=[];try{Q=JSON.parse(localStorage.getItem(QK)||'[]')}catch(e){}
-const VER='v9.3 · 2026-10-13';
+const VER='v9.3.2 · 2026-10-13';
 let sb=null,USER=null,chan=null,flushing=false,ft=null,pt=null,PR=false,SYNERR=false,SYNMSG='',IMGERR='',LASTSIG='';
 const SL=[];let RTS='',ASKING=false;const slog=m=>{SL.push(new Date().toTimeString().slice(0,8)+' '+m);if(SL.length>25)SL.shift()};
 const errMsg=e=>(e&&(e.message||e.error_description||e.code))||String(e||'未知錯誤');
@@ -459,7 +459,7 @@ function finish(type,note,cust,link){const t=total(),gl=giftLines(),items=Object
 items.forEach(i=>{const p=P(i.pid);(p.combo||[{pid:i.pid,q:1}]).forEach(c=>{const x=P(c.pid);if(x&&sk(x)!=null)x.evs[S.cur]=Math.max(0,sk(x)-i.qty*c.q)})});
 const no=String(S.nid++).padStart(3,'0').slice(-3),rc=t===0?0:(recv===''?t:+recv),oid=Date.now()*1000+Math.floor(Math.random()*1000);
 S.orders.unshift({id:oid,ev:S.cur,no,time:oid,items,disc,total:t,recv:rc,type,status:type=='pre'?'準備中':'完成',note:note||'',link:link||'',rw,cust:cust||0});
-lsave();qo(oid);cart={};gift={};GQ={};disc=0;recv='';closeM();$('#co_m').classList.remove('on');toast(type=='pre'?'已建立預購':'結帳完成 找零 $'+Math.max(0,rc-t));render()}
+lsave();qo(oid);qstate();cart={};gift={};GQ={};disc=0;recv='';closeM();$('#co_m').classList.remove('on');toast(type=='pre'?'已建立預購':'結帳完成 找零 $'+Math.max(0,rc-t));render()}
 /* orders */
 const fmt=t=>{const d=new Date(t);return d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
 let OEV=null;
@@ -724,14 +724,29 @@ else{const rows=t.split(/\r?\n/).map(l=>(l.match(/("([^"]|"")*"|[^,]*)(,|$)/g)||
 if(rows.length&&isNaN(+rows[0][1]))rows.shift();rows.forEach(c=>{if(!c[0]||c[1]===''||c[1]==null||isNaN(+c[1]))return;const st=(c[2]===''||c[2]==null)?null:+c[2],ex=S.products.find(p=>p.name==c[0]);if(ex){ex.price=+c[1];ex.evs=ex.evs||{};ex.evs[S.cur]=st}else S.products.push({id:Date.now()+n,name:c[0],price:+c[1],evs:{[S.cur]:st},img:''});n++})}
 save();render();toast('已匯入 '+n+' 項商品')})}
 /* ---- usage ---- */
-const fmtB=n=>n<1024?n+' B':n<1048576?Math.round(n/1024)+' KB':(n/1048576).toFixed(1)+' MB';
-async function loadUsage(){const ph=$('#uph'),dt=$('#udt');if(!ph)return;
-const dsz=new Blob([JSON.stringify({events:S.events,products:S.products.map(p=>({...p,img:p.img&&p.img.startsWith('data:')?'':p.img})),groups:S.groups,rules:S.rules,orders:S.orders})]).size;
-if(dt)dt.textContent=fmtB(dsz);
-let n=0,b=0;
-if(sb&&USER){try{let off=0;for(;;){const r=await sb.storage.from('product-images').list(USER.id,{limit:100,offset:off});if(r.error||!r.data||!r.data.length)break;r.data.forEach(f=>{n++;b+=(f.metadata&&f.metadata.size)||0});if(r.data.length<100)break;off+=100}}catch(e){}}
-else S.products.forEach(p=>{if(p.img){n++;if(p.img.startsWith('data:'))b+=Math.round(p.img.length*.75)}});
-const el=$('#uph');if(el)el.textContent=fmtB(b)+'（'+n+' 張）'}
+const fmtB=n=>(n/1048576).toFixed(n<1048576?2:1)+' MB';
+async function loadUsage(){
+ const ph=$('#uph'),dt=$('#udt');if(!ph)return;
+ ph.textContent='查詢中…';if(dt)dt.textContent='查詢中…';
+ // Project quotas are not available to a browser publishable key.
+ // The optional authenticated RPC reads limits configured in Supabase itself.
+ let limits=null;
+ if(sb&&USER){try{const r=await sb.rpc('pos_usage_limits');if(!r.error&&r.data){const x=Array.isArray(r.data)?r.data[0]:r.data;if(x&&Number.isFinite(+x.photos_bytes)&&Number.isFinite(+x.data_bytes))limits=x}}catch(e){}}
+ const photoLimit=limits?' / '+fmtB(+limits.photos_bytes):' / 未提供額度';
+ const dataLimit=limits?' / '+fmtB(+limits.data_bytes):' / 未提供額度';
+ let n=0,b=0;
+ if(sb&&USER){try{let off=0;for(;;){const r=await sb.storage.from('product-images').list(USER.id,{limit:100,offset:off});if(r.error)throw r.error;const files=r.data||[];files.forEach(f=>{if(f.id){n++;b+=(f.metadata&&f.metadata.size)||0}});if(files.length<100)break;off+=100}}catch(e){ph.textContent='無法讀取照片容量'+photoLimit;return}}
+ else{ph.textContent='未登入，無法讀取照片容量'+photoLimit;return}
+ ph.textContent=fmtB(b)+'（'+n+' 張）'+photoLimit;
+ // This is an estimate of app records, not the total Postgres project storage usage.
+ try{
+  const [a,o]=await Promise.all([sb.from('pos_state').select('data').eq('user_id',USER.id).maybeSingle(),sb.from('pos_orders').select('data').eq('user_id',USER.id)]);
+  if(a.error||o.error)throw (a.error||o.error);
+  const dataBytes=new Blob([JSON.stringify(a.data?.data||{}),JSON.stringify((o.data||[]).map(x=>x.data))]).size;
+  if(dt)dt.textContent=fmtB(dataBytes)+dataLimit;
+ }catch(e){if(dt)dt.textContent='無法讀取資料容量'+dataLimit}
+}
+
 Object.assign(I,{
 chev:sv('M8.600 16.600 13.200 12 8.600 7.400 10 6l6 6-6 6-1.400-1.400z').replace('class="ic"','class="ic chv"'),
 search:sv('M15.500 14h-.79l-.28-.27A6.470 6.470 0 0 0 16 9.500 6.500 6.500 0 1 0 9.500 16c1.610 0 3.090-.59 4.230-1.570l.27.28v.79l5 4.990L20.490 19l-4.990-5zm-6 0C7.010 14 5 11.990 5 9.500S7.010 5 9.500 5 14 7.010 14 9.500 11.990 14 9.500 14z'),
