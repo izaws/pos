@@ -195,8 +195,8 @@ img.bi{background:#fff;border:1px solid var(--ln);object-fit:contain;border-radi
 .keys{gap:6px;margin-bottom:7px}.keys button{padding:11px 0;font-size:20px}.keys button.k2{font-size:13px}
 .grp .li .lnk{white-space:nowrap;flex:none}.grp .li>input{flex:1;min-width:0}
 /* v6: bigger logo aligned to 1st card centre, lower tab bar, tablet two-pane */
-:root{--cols:3;--gap:8px;--cw:clamp(340px,38vw,440px);--tb:max(6px,calc(env(safe-area-inset-bottom,0px) - 18px))}
-@media(min-width:900px){:root{--cols:4}}@media(min-width:1150px){:root{--cols:5}}
+:root{--cols:3;--gap:8px;--cw:clamp(400px,46vw,600px);--tb:max(6px,calc(env(safe-area-inset-bottom,0px) - 18px))}
+@media(min-width:900px){:root{--cols:4}}
 .grid{grid-template-columns:repeat(var(--cols),1fr);gap:12px var(--gap)}
 .logo{height:auto;max-width:none;margin-top:0;width:calc((100% - (var(--cols) - 1)*var(--gap))/var(--cols)/2*.85);object-fit:contain;display:block}.top{align-items:center}
 #tabs{bottom:var(--tb)}
@@ -486,10 +486,13 @@ const used=pid=>Object.entries(cart).reduce((a,[id,q])=>{const p=P(id);if(!p)ret
 function add(id){const p=P(id);if(p.off){toast('此商品已下架');return}cart[id]=(cart[id]||0)+1;const cs=p.combo?p.combo.map(c=>c.pid):[id];if(cs.some(pid=>{const x=P(pid);return x&&sk(x)!=null&&used(pid)>sk(x)})){if(--cart[id]<=0)delete cart[id];toast('庫存不足');return}upd()}
 function sub1(id){if(--cart[id]<=0){delete cart[id];delete gift[id]}upd()}
 /* checkout */
+const bPids=r=>r.pids||(r.pid?[r.pid]:[]),bWorks=r=>r.works||[];
+function bMatch(r){const ps=bPids(r),ws=bWorks(r);if(!ps.length&&!ws.length)return true;return Object.keys(cart).some(id=>{const p=P(id);if(!p)return false;const xs=[p].concat(p.combo?p.combo.map(c=>P(c.pid)).filter(Boolean):[]);return xs.some(x=>ps.includes(x.id)||(x.work&&ws.includes(x.work)))})}
+function bLabel(r){return bPids(r).map(id=>P(id)).filter(Boolean).map(p=>p.name).concat(bWorks(r).map(w=>'作品：'+w)).join('、')}
 function giftLines(){if(!cnt()){GQ={};return[]}
 const t=total(),rs=[],left={};
 S.rules.full.filter(r=>t>=r.amt).forEach(r=>rs.push({k:'f'+r.amt+'_'+r.gid,txt:`滿 $${r.amt}`,r}));
-S.rules.buy.filter(r=>!r.pid||cart[r.pid]).forEach(r=>rs.push({k:'b'+(r.pid||0)+'_'+r.gid,txt:'消費禮'+(r.pid&&P(r.pid)?`（購買${P(r.pid).name}）`:''),r}));
+S.rules.buy.forEach((r,ri)=>{if(!bMatch(r))return;const bl=bLabel(r);rs.push({k:'b'+ri+'_'+r.gid,txt:'消費禮'+(bl?`（購買${bl}）`:''),r})});
 return rs.map(o=>{const g=o.r.gid?P(o.r.gid):null;
 if(!o.r.gid)return{...o,qty:0,textonly:1,note:giftName(o.r)};
 if(!g||!inEv(g)||g.off)return{...o,qty:0,none:1,note:(g?g.name:giftName(o.r))+'（本場次無法贈送）'};
@@ -589,7 +592,7 @@ function r3x(){$('#p3').innerHTML=`<h1>設定</h1>
 <div class="li"><b>滿額禮</b><button class="lnk" onclick="ruleEd('full',-1)">＋ 新增</button></div>
 ${S.rules.full.map((r,i)=>`<div class="li" onclick="ruleEd('full',${i})"><span>滿 $${r.amt}　${esc(giftName(r))}</span>${I.chev}</div>`).join('')}
 <div class="li"><b>消費禮</b><button class="lnk" onclick="ruleEd('buy',-1)">＋ 新增</button></div>
-${S.rules.buy.map((r,i)=>`<div class="li" onclick="ruleEd('buy',${i})"><span>${r.pid&&P(r.pid)?'買 '+esc(P(r.pid).name):'任一消費'}　${esc(giftName(r))}</span>${I.chev}</div>`).join('')}</div>
+${S.rules.buy.map((r,i)=>`<div class="li" onclick="ruleEd('buy',${i})"><span>${bLabel(r)?'買 '+esc(bLabel(r)):'任一消費'}　${esc(giftName(r))}</span>${I.chev}</div>`).join('')}</div>
 <div class="sec">一般</div><div class="grp">${rowC('palette','#5b5bd6','設定顏色','colorM()','<i style="width:26px;height:26px;border-radius:50%;background:var(--g);display:block"></i>')}</div>
 <div class="sec">資料匯入／匯出</div><div class="grp">
 ${rowIO('全部資料','.json,application/json','impA','expA()')}
@@ -623,13 +626,16 @@ function evRenOk(id){const n=($('#evi').value||'').trim();if(n){S.events.find(e=
 let RU=null;
 const pickH=(key,items,sel)=>`<div class="pk">${items.map(x=>`<div class="pki ${x.id==sel?'on':''}" onclick="pk(this,'${key}',${x.id})"><span>${esc(x.name)}</span>${x.id==sel?I.check:''}</div>`).join('')||'<div class="empty" style="padding:16px">先到商品管理新增商品</div>'}</div>`;
 function pk(el,key,id){RU[key]=id;[...el.parentNode.children].forEach(c=>{c.classList.remove('on');const ic=c.querySelector('.ic');if(ic)ic.remove()});el.classList.add('on');el.insertAdjacentHTML('beforeend',I.check)}
-function ruleEd(k,i){const r=i>=0?S.rules[k][i]:{};RU={k,i,amt:r.amt||'',gid:r.gid||0,pid:r.pid||0};TALL=1;ANI=1;
+const pickM=(items,sel)=>`<div class="pk">${items.map(x=>`<div class="pki ${sel.includes(x.id)?'on':''}" onclick="pkm(this,${x.id})"><span>${esc(x.name)}${x.work?` <span class="sub">${esc(x.work)}</span>`:''}</span>${sel.includes(x.id)?I.check:''}</div>`).join('')||'<div class="empty" style="padding:16px">先到商品管理新增商品</div>'}</div>`;
+function pkm(el,id){const a=RU.pids,i=a.indexOf(id);if(i>=0){a.splice(i,1);el.classList.remove('on');const ic=el.querySelector('.ic');if(ic)ic.remove()}else{a.push(id);el.classList.add('on');el.insertAdjacentHTML('beforeend',I.check)}}
+function rwTog(i,el){const w=S.works[i],a=RU.works,j=a.indexOf(w);if(j>=0)a.splice(j,1);else a.push(w);el.classList.toggle('on')}
+function ruleEd(k,i){const r=i>=0?S.rules[k][i]:{};RU={k,i,amt:r.amt||'',gid:r.gid||0,pids:[...bPids(r)],works:[...bWorks(r)]};TALL=1;ANI=1;
 openM(`<div class="sh row"><button class="p2" onclick="closeM()">取消</button><b style="font-size:17px">${i>=0?'編輯':'新增'}${k=='full'?'滿額禮':'消費禮'}</b><button class="p2" onclick="ruleSave()">保存</button></div><div class="sbody rl">
-${k=='full'?`<div class="sub" style="margin:0 0 6px">達到金額</div><div class="fld"><span class="sub">$</span><input type="number" inputmode="numeric" placeholder="例如 300" value="${esc(RU.amt)}" oninput="RU.amt=this.value"></div>`:`<div class="sub" style="margin:0 0 6px">購買商品</div>${pickH('pid',[{id:0,name:'任一消費'},...S.products],RU.pid)}`}
+${k=='full'?`<div class="sub" style="margin:0 0 6px">達到金額</div><div class="fld"><span class="sub">$</span><input type="number" inputmode="numeric" placeholder="例如 300" value="${esc(RU.amt)}" oninput="RU.amt=this.value"></div>`:`<div class="sub" style="margin:0 0 6px">購買條件（可多選，不選＝任一消費）</div>${S.works.length?`<div class="chips wrap" style="margin:0 0 10px">${S.works.map((w,wi)=>`<button class="chip ${RU.works.includes(w)?'on':''}" onclick="rwTog(${wi},this)">${esc(w)}</button>`).join('')}</div>`:''}${pickM(S.products,RU.pids)}`}
 <div class="sub" style="margin:16px 0 6px">贈送商品（從商品管理選擇）</div>${pickH('gid',S.products,RU.gid)}
 ${i>=0?`<button class="btn o" style="width:100%;margin-top:16px;color:var(--red)" onclick="ruleDel()">刪除</button>`:''}</div>`)}
 function ruleSave(){const u=RU;if(!u.gid)return toast('請選擇贈送商品');const a=+u.amt;if(u.k=='full'&&!(a>0))return toast('請輸入金額');
-const r=u.k=='full'?{amt:a,gid:u.gid}:{pid:u.pid||0,gid:u.gid};if(u.i>=0)S.rules[u.k][u.i]=r;else S.rules[u.k].push(r);if(u.k=='full')S.rules.full.sort((x,y)=>x.amt-y.amt);save();closeM();r3()}
+const r=u.k=='full'?{amt:a,gid:u.gid}:{pids:u.pids,works:u.works,gid:u.gid};if(u.i>=0)S.rules[u.k][u.i]=r;else S.rules[u.k].push(r);if(u.k=='full')S.rules.full.sort((x,y)=>x.amt-y.amt);save();closeM();r3()}
 async function ruleDel(){if(!await ask('確認刪除？'))return;S.rules[RU.k].splice(RU.i,1);save();closeM();r3()}
 let E={};
 function prodEd(id,cb){const p=id?P(id):{};E={id,name:p.name||'',price:p.price??'',evs:id?{...p.evs}:{[S.cur]:null},img:p.img||'',cost:p.cost??'',off:!!p.off,hide:!!p.hide,group:p.group||'',work:p.work||'',combo:id?(p.combo?p.combo.map(c=>({...c})):null):(cb?[]:null)};prodR()}
@@ -662,7 +668,7 @@ ${cb?comboCard():''}
 ${e.addW?`<div class="li"><input id="wnew" placeholder="新作品名稱"><button class="lnk" onclick="workOk()">新增</button></div>`:''}
 <div class="li" style="display:block"><div class="rw" style="margin-bottom:10px">${ic('folder','#2f2f33')}商品分組</div><div class="chips wrap"><button class="chip ${!e.group&&!e.addG?'on':''}" onclick="grpPick(-1)">不分組</button>${S.groups.map((g,i)=>`<button class="chip ${e.group==g&&!e.addG?'on':''}" onclick="grpPick(${i})">${esc(g)}</button>`).join('')}<button class="chip ${e.addG?'on':''}" onclick="grpSel('+new')">＋ 新增分組</button></div></div>
 ${e.addG?`<div class="li"><input id="gnew" placeholder="新分組名稱"><button class="lnk" onclick="grpOk()">新增</button></div>`:''}
-<div class="li" style="display:block"><div class="rw" style="margin-bottom:10px">${ic('box','#2f2f33')}場次與庫存</div>${S.events.map(ev=>{const on=ev.id in e.evs;return`<div class="row" style="gap:10px;margin:0 0 8px"><button class="chip ${on?'on':''}" style="max-width:55%" onclick="evTog(${ev.id})">${esc(ev.name)}</button>${on&&!cb?`<input type="number" inputmode="numeric" style="width:36%;text-align:right" placeholder="不限" value="${esc(e.evs[ev.id]==null?'':e.evs[ev.id])}" oninput="evSt(${ev.id},this.value)">`:''}</div>`}).join('')}<div class="sub" style="margin:2px 0 0">點場次名稱切換是否出現；數量留空＝不管理庫存。各場次庫存互不影響，圖片共用。</div></div>
+<div class="li" style="display:block"><div class="rw" style="margin-bottom:10px">${ic('box','#2f2f33')}庫存</div>${cb?'':`<div class="row" style="gap:10px;margin:0 0 8px"><span style="max-width:55%">${esc((S.events.find(x=>x.id==S.cur)||{}).name||'')}</span><input type="number" inputmode="numeric" style="width:36%;text-align:right" placeholder="不限" value="${esc(e.evs[S.cur]==null?'':e.evs[S.cur])}" oninput="evSt(S.cur,this.value)"></div>`}<div class="sub" style="margin:2px 0 0">僅編輯目前場次的庫存，要改其他場次請先切換場次。數量留空＝不管理庫存。</div></div>
 <div class="li"><span class="rw">${ic('tag','#2f2f33')}單位成本</span><input type="number" inputmode="numeric" style="width:40%;text-align:right" placeholder="選填" value="${esc(e.cost)}" oninput="E.cost=this.value"></div></div>
 ${id?`<button class="btn o" style="width:100%;margin-top:14px;color:var(--red)" onclick="delP(${id})">刪除${cb?'set':'商品'}</button>`:''}</div>`);const nb=document.querySelector('#md .sbody');if(nb)nb.scrollTop=st}
 function imgFile(f){if(!f)return;const r=new FileReader();r.onload=()=>imgOpen(r.result);r.onerror=()=>toast('圖片讀取失敗');r.readAsDataURL(f)}
