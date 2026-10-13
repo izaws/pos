@@ -226,6 +226,9 @@ input,select,textarea{font-size:16px!important}
 .card.in .im{box-shadow:0 0 0 2.5px var(--ac)}
 .minus{right:8px;top:8px;transform:none;width:28px;height:28px;border:0;box-shadow:0 1px 5px rgba(0,0,0,.2);z-index:3}
 .qb{right:8px;bottom:8px;transform:none;z-index:3}
+/* Pending checkout badge: anchored to the image, not the card. */
+.pending-sale{position:absolute;left:50%;bottom:40px;transform:translateX(-50%);z-index:2;display:flex;align-items:center;gap:5px;white-space:nowrap;background:rgba(47,47,51,.8);color:#fff;border-radius:5px;padding:9px 12px;font-size:13px;font-weight:600;pointer-events:none;box-shadow:0 1px 5px rgba(0,0,0,.12)}
+.pending-sale svg{width:15px;height:15px;flex-shrink:0}
 .sbody.rl{display:flex;flex-direction:column}
 .sbody.rl .pk{flex:1 1 0;min-height:140px;max-height:none}
 /* product grid drag handle */
@@ -267,7 +270,7 @@ const lsave=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast(
 const save=()=>{lsave();qstate()};
 /* ---- sync (Supabase) ---- */
 const QK=KEY+'_q';let Q=[];try{Q=JSON.parse(localStorage.getItem(QK)||'[]')}catch(e){}
-const VER='v9.3.2 · 2026-10-13';
+const VER='v9.3.3 · 2026-10-13';
 let sb=null,USER=null,chan=null,flushing=false,ft=null,pt=null,PR=false,SYNERR=false,SYNMSG='',IMGERR='',LASTSIG='';
 const SL=[];let RTS='',ASKING=false;const slog=m=>{SL.push(new Date().toTimeString().slice(0,8)+' '+m);if(SL.length>25)SL.shift()};
 const errMsg=e=>(e&&(e.message||e.error_description||e.code))||String(e||'未知錯誤');
@@ -276,6 +279,7 @@ function setSync(){const el=document.getElementById('syn');if(el)el.textContent=
 function qpush(op){if(!SB_URL)return;Q.push(op);saveQ();setSync();flushSoon()}
 function qstate(){if(!SB_URL)return;if(!Q.some(q=>q.t=='state')){Q.push({t:'state'});saveQ()}setSync();flushSoon()}
 const qo=id=>qpush({t:'o',id}),qod=id=>qpush({t:'od',id}),qoev=ev=>qpush({t:'oev',ev});
+function pendingProductIds(){const ids=new Set();for(const q of Q){if(q.t!=='o'&&q.t!=='sale_state')continue;const o=S.orders.find(x=>String(x.id)===String(q.id));if(!o)continue;for(const i of o.items||[]){ids.add(String(i.pid));const p=P(i.pid);for(const c of (p&&p.combo)||[])ids.add(String(c.pid))}}return ids}
 function qreset(){Q=[{t:'reset'},{t:'state'},...S.orders.map(o=>({t:'o',id:o.id}))];saveQ();flushSoon()}
 function flushSoon(){clearTimeout(ft);ft=setTimeout(flush,500)}
 const stateData=()=>({events:S.events,products:S.products,groups:S.groups,works:S.works,rules:S.rules,nid:S.nid});
@@ -283,12 +287,12 @@ async function upImg(blob){const path=USER.id+'/'+Date.now()+'_'+Math.random().t
 async function migrateImgs(){IMGERR='';for(const p of S.products){if(p.img&&p.img.startsWith('data:')){try{const b=await (await fetch(p.img)).blob();p.img=await upImg(b);lsave()}catch(e){IMGERR=errMsg(e)}}}}
 async function flush(){if(!sb||!USER||flushing||!navigator.onLine){setSync();return}flushing=true;
 try{while(Q.length){const op=Q[0];let r=null;
-if(op.t=='state'){await migrateImgs();r=await sb.from('pos_state').upsert({user_id:USER.id,data:stateData(),updated_at:new Date().toISOString()})}
+if(op.t=='state'||op.t=='sale_state'){await migrateImgs();r=await sb.from('pos_state').upsert({user_id:USER.id,data:stateData(),updated_at:new Date().toISOString()})}
 else if(op.t=='o'){const o=S.orders.find(x=>x.id==op.id);if(o)r=await sb.from('pos_orders').upsert({user_id:USER.id,id:o.id,ev:o.ev,data:o,updated_at:new Date().toISOString()})}
 else if(op.t=='od')r=await sb.from('pos_orders').delete().eq('user_id',USER.id).eq('id',op.id);
 else if(op.t=='oev')r=await sb.from('pos_orders').delete().eq('user_id',USER.id).eq('ev',op.ev);
 else if(op.t=='reset')r=await sb.from('pos_orders').delete().eq('user_id',USER.id);
-if(r&&r.error)throw r.error;slog('上傳 '+op.t+(op.id?' '+op.id:'')+' 成功');Q.shift();saveQ()}
+if(r&&r.error)throw r.error;slog('上傳 '+op.t+(op.id?' '+op.id:'')+' 成功');Q.shift();saveQ();if(op.t==='o'||op.t==='sale_state'){if(cur===0)r0();setSync()}}
 SYNERR=false;SYNMSG=''}catch(e){SYNERR=true;SYNMSG=errMsg(e);slog('上傳失敗：'+SYNMSG);setTimeout(flush,15000)}
 flushing=false;setSync()}
 function applyRemote(d,rows){const cur=S.cur;S.events=d.events&&d.events.length?d.events:S.events;S.products=d.products||[];S.groups=d.groups||[];S.works=d.works||S.works||[];S.rules=d.rules||{full:[],buy:[]};S.nid=Math.max(S.nid||10,d.nid||10);S.orders=rows.map(r=>r.data).sort((a,b)=>b.time-a.time);migOrders();migProds();if(!S.events.some(e=>e.id==cur))S.cur=S.events[0].id;Object.keys(cart).forEach(id=>{if(!P(id)){delete cart[id];delete gift[id]}});lsave()}
@@ -353,7 +357,7 @@ sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRef
 try{const {data}=await sb.auth.getSession();if(data.session){USER=data.session.user;await startSync()}else $('#login').classList.add('on')}catch(e){}
 sb.auth.onAuthStateChange((ev)=>{if(ev=='SIGNED_OUT'){USER=null;if(chan){sb.removeChannel(chan);chan=null}setSync();if(cur==3)r3()}});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&USER){flush().then(pull)}});
-window.addEventListener('online',()=>{if(USER)flush().then(pull)});
+window.addEventListener('online',()=>{if(USER){slog('偵測到恢復網路，重試待同步資料');flush().then(pull)}});
 setInterval(()=>{if(USER&&!document.hidden&&navigator.onLine){if(Q.length)flush().then(()=>pull());else if(!flushing)pull()}},20000)}
 async function doLogin(mode){const e=$('#lg_e').value.trim(),p=$('#lg_p').value,m=$('#lg_m');if(!e||p.length<6){m.textContent='請輸入信箱與至少 6 碼密碼';return}
 m.style.color='var(--sub)';m.textContent='處理中…';
@@ -413,8 +417,9 @@ function render(){document.body.classList.toggle('w0',cur==0);[r0,r1,r2,r3][cur]
 function bar(){$('#tot').textContent='$ '+total();$('#goBtn').textContent='去結算 ('+cnt()+'件)';$('#goBtn').disabled=!cnt();if(WQ.matches&&cur==0)coR()}
 function r0(){
 $('#p0').innerHTML=`<div class="top"><img class="logo" src="${LOGO}" alt="" onerror="lgErr(this)"><div style="position:relative"><button class="evb" onclick="event.stopPropagation();$('#em').classList.toggle('on')"><span>${esc(evName())}</span>${I.tri}</button><div id="em" class="dm" onclick="event.stopPropagation()"><div class="cap0">切換場次</div>${S.events.map(e=>`<div class="mi" onclick="S.cur=${e.id};save();render()"><span>${esc(e.name)}</span>${e.id==S.cur?`<span class="ck">${I.check}</span>`:''}</div>`).join('')}</div></div></div>
-${S.groups.length?`<div class="chips">${['',...S.groups].map((g,i)=>`<button class="chip ${g==CG?'on':''}" onclick="CG=${i?`S.groups[${i-1}]`:"''"};r0()">${i?esc(g):'全部'}</button>`).join('')}</div>`:''}<div class="grid">${evP().filter(p=>p.hide!==true&&(!CG||p.group==CG)).map(p=>{const q=cart[p.id]||0,sv=sk(p),out=(sv!=null&&sv<=0)||p.off;
+${S.groups.length?`<div class="chips">${['',...S.groups].map((g,i)=>`<button class="chip ${g==CG?'on':''}" onclick="CG=${i?`S.groups[${i-1}]`:"''"};r0()">${i?esc(g):'全部'}</button>`).join('')}</div>`:''}<div class="grid">${evP().filter(p=>p.hide!==true&&(!CG||p.group==CG)).map(p=>{const q=cart[p.id]||0,sv=sk(p),pending=pendingProductIds().has(String(p.id)),out=(sv!=null&&sv<=0)||p.off;
 return `<div class="card ${q?'in':''}" data-id="${p.id}" ${out?'style="opacity:.55"':''} onclick="add(${p.id})"><div class="imw"><div class="im" style="${p.img?`background-image:url(${p.img})`:''}">${p.img?'':I.gift}</div>
+${pending?`<div class="pending-sale"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>待同步</div>`:''}
 ${p.off?'<div class="stk z">已下架</div>':sv!=null?`<div class="stk ${out?'z':''}">${out?'售罄':sv}</div>`:''}
 ${q?`<button class="minus" onclick="event.stopPropagation();sub1(${p.id})">−</button><span class="qb">${q}</span>`:''}</div>
 <div class="nm">${esc(p.name)}</div><div class="pr">$ ${p.price}</div></div>`}).join('')||'<div class="empty">到「商品管理」新增商品</div>'}</div>`}
@@ -459,7 +464,7 @@ function finish(type,note,cust,link){const t=total(),gl=giftLines(),items=Object
 items.forEach(i=>{const p=P(i.pid);(p.combo||[{pid:i.pid,q:1}]).forEach(c=>{const x=P(c.pid);if(x&&sk(x)!=null)x.evs[S.cur]=Math.max(0,sk(x)-i.qty*c.q)})});
 const no=String(S.nid++).padStart(3,'0').slice(-3),rc=t===0?0:(recv===''?t:+recv),oid=Date.now()*1000+Math.floor(Math.random()*1000);
 S.orders.unshift({id:oid,ev:S.cur,no,time:oid,items,disc,total:t,recv:rc,type,status:type=='pre'?'準備中':'完成',note:note||'',link:link||'',rw,cust:cust||0});
-lsave();qo(oid);qstate();cart={};gift={};GQ={};disc=0;recv='';closeM();$('#co_m').classList.remove('on');toast(type=='pre'?'已建立預購':'結帳完成 找零 $'+Math.max(0,rc-t));render()}
+lsave();qo(oid);qpush({t:'sale_state',id:oid});qstate();cart={};gift={};GQ={};disc=0;recv='';closeM();$('#co_m').classList.remove('on');toast(type=='pre'?'已建立預購':'結帳完成 找零 $'+Math.max(0,rc-t));render()}
 /* orders */
 const fmt=t=>{const d=new Date(t);return d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
 let OEV=null;
