@@ -207,7 +207,7 @@ img.bi{background:#fff;border:1px solid var(--ln);object-fit:contain;border-radi
 body.w0 #app{margin-right:var(--cw)}
 body.w0 #tabs{right:calc(var(--cw) + 16px)}
 body.w0 #bar{display:none!important}
-body.w0 #p0 .card .im{aspect-ratio:auto;height:max(72px,calc((100dvh - 230px)/3.5 - 56px))}
+body.w0 #p0 .card .im{aspect-ratio:6/7}
 body.w0 #p0 .pending-sale{bottom:8px}
 body.w0 #co_m{display:flex;inset:0 0 0 auto;width:var(--cw);background:var(--bg);border-left:1px solid var(--ln);z-index:7}
 }
@@ -381,7 +381,7 @@ function qstate(){if(!SB_URL)return;if(!Q.some(q=>q.t=='state')){Q.push({t:'stat
 const qo=id=>qpush({t:'o',id}),qou=id=>qpush({t:'ou',id}),qod=id=>qpush({t:'od',id}),qoev=ev=>qpush({t:'oev',ev});
 function pendingProductIds(){const ids=new Set(REMOTE_PENDING);for(const q of Q){if(q.t!=='o'&&q.t!=='sale_state')continue;const o=S.orders.find(x=>String(x.id)===String(q.id));if(!o)continue;for(const i of o.items||[]){ids.add(String(i.pid));const p=P(i.pid);for(const c of (p&&p.combo)||[])ids.add(String(c.pid))}}return ids}
 function completedProductIds(){const ids=new Set(REMOTE_DONE);const now=Date.now();for(const [id,until] of LOCAL_DONE){if(until<=now)LOCAL_DONE.delete(id);else ids.add(id)}return ids}
-function markLocalCompleted(o){if(!o)return;const until=Date.now()+1500;for(const id of pendingIdsForOrder(o))LOCAL_DONE.set(id,until);if(cur===0)r0();setTimeout(()=>{if(cur===0)r0()},1600)}
+function markLocalCompleted(o){if(!o)return;const until=Date.now()+1000;for(const id of pendingIdsForOrder(o))LOCAL_DONE.set(id,until);if(cur===0)r0();setTimeout(()=>{if(cur===0)r0()},1100)}
 // Shared pending status. Requires the accompanying SQL migration. Failures never block checkout.
 const pendingIdsForOrder=o=>[...new Set((o.items||[]).flatMap(i=>{const p=P(i.pid);return [String(i.pid),...((p&&p.combo)||[]).map(c=>String(c.pid))]}))];
 async function fetchRemotePending(){
@@ -395,7 +395,7 @@ async function fetchRemotePending(){
   for(const row of data||[]){
    const isDone=row.status==='done';
    // Completion is visible for only 1.5 seconds, regardless of cloud retention time.
-   if(isDone && (!row.completed_at || now-new Date(row.completed_at).getTime()>1500))continue;
+   if(isDone && (!row.completed_at || now-new Date(row.completed_at).getTime()>1000))continue;
    for(const id of row.product_ids||[])(isDone?done:pending).add(String(id));
   }
   const changed=JSON.stringify([[...pending].sort(),[...done].sort()])!==JSON.stringify([[...REMOTE_PENDING].sort(),[...REMOTE_DONE].sort()]);
@@ -761,7 +761,7 @@ function grpOk(){const n=($('#gnew').value||'').trim();if(!n)return toast('請�
 function prodR(){const e=E,id=e.id,cb=!!e.combo,ic=(n,c)=>`<i class="bk t" style="--c:${c}">${I[n]}</i>`;
 const old=document.querySelector('#md .sbody'),st=old?old.scrollTop:0;TALL=1;openM(`<div class="sh row"><button class="p2" onclick="closeM()">取消</button><b style="font-size:17px">${id?'編輯':'新增'}${cb?'set':'商品'}</b><button class="p2" onclick="prodSave(${id||0})">保存</button></div><div class="sbody">
 <div class="row" style="align-items:flex-start;gap:14px;margin-bottom:16px"><label class="imgb" style="${e.img?`background-image:url(${e.img})`:''}">${e.img?'':I.image}<input type="file" accept="image/*" hidden onchange="pimg(this)"></label>
-<div style="flex:1;display:grid;gap:8px"><div class="fld"><span class="sub" style="white-space:nowrap;margin:0">名稱</span><input style="flex:1;min-width:0" placeholder="${cb?'例如：壓克力＋明信片':'例如：壓克力'}" value="${esc(e.name)}" oninput="E.name=this.value"></div><div class="fld"><span class="sub" style="white-space:nowrap;margin:0">金額</span><span class="sub" style="margin:0">$</span><input type="number" inputmode="numeric" style="flex:1;min-width:0" placeholder="0" value="${esc(e.price)}" oninput="E.price=this.value"></div>${cb?'':`<div class="fld"><span class="sub" style="white-space:nowrap;margin:0">庫存</span><input id="pstk" type="number" inputmode="numeric" style="flex:1;min-width:0" placeholder="不限" value="${esc(e.evs[S.cur]==null?'':e.evs[S.cur])}" oninput="evSt(S.cur,this.value)"><button style="width:28px;height:28px;border-radius:50%;border:0;background:var(--ln);color:var(--tx);font-size:18px;line-height:1;padding:0;flex:none" onclick="stkStep(-1)">−</button><button style="width:28px;height:28px;border-radius:50%;border:0;background:var(--ln);color:var(--tx);font-size:18px;line-height:1;padding:0;flex:none" onclick="stkStep(1)">+</button></div>`}</div></div>
+<div style="flex:1;display:grid;gap:8px"><div class="fld"><span class="sub" style="width:34px;flex:none;white-space:nowrap;margin:0">名稱</span><span style="width:10px;flex:none"></span><input style="flex:1;min-width:0" placeholder="${cb?'例如：壓克力＋明信片':'例如：壓克力'}" value="${esc(e.name)}" oninput="E.name=this.value"></div><div class="fld"><span class="sub" style="width:34px;flex:none;white-space:nowrap;margin:0">金額</span><span style="width:10px;flex:none">$</span><input type="number" inputmode="numeric" style="flex:1;min-width:0" placeholder="0" value="${esc(e.price)}" oninput="E.price=this.value"></div>${cb?'':`<div class="fld"><span class="sub" style="width:34px;flex:none;white-space:nowrap;margin:0">庫存</span><span style="width:10px;flex:none"></span><input id="pstk" type="number" inputmode="numeric" style="flex:1;min-width:0" placeholder="不限" value="${esc(e.evs[S.cur]==null?'':e.evs[S.cur])}" oninput="evSt(S.cur,this.value)"><button style="width:28px;height:28px;border-radius:50%;border:0;background:var(--ln);color:var(--tx);font-size:18px;line-height:1;padding:0;flex:none" onclick="stkStep(-1)">−</button><button style="width:28px;height:28px;border-radius:50%;border:0;background:var(--ln);color:var(--tx);font-size:18px;line-height:1;padding:0;flex:none" onclick="stkStep(1)">+</button></div>`}</div></div>
 <div class="row" style="gap:8px;margin:-4px 0 10px;justify-content:flex-start"><button class="p2" ${e.img?'':'disabled style="opacity:.4"'} onclick="imgEdit()">調整圖片</button><button class="p2" ${e.img?'':'disabled style="opacity:.4"'} onclick="E.img='';prodR()">移除圖片</button></div>
 <div class="fld" style="margin-bottom:16px"><span class="sub" style="display:flex">${I.image}</span><input id="pst" placeholder="貼上圖片" autocomplete="off" autocapitalize="off" onpaste="pasteImg(event)" oninput="this.value=''"></div>
 ${cb?comboCard():''}
@@ -772,7 +772,7 @@ ${cb?comboCard():''}
 ${e.addW?`<div class="li"><input id="wnew" placeholder="新作品名稱"><button class="lnk" onclick="workOk()">新增</button></div>`:''}
 <div class="li" style="display:block"><div class="rw" style="margin-bottom:10px">${ic('folder','#2f2f33')}商品類別</div><div class="chips wrap"><button class="chip ${!e.group&&!e.addG?'on':''}" onclick="grpPick(-1)">不選</button>${S.groups.map((g,i)=>`<button class="chip ${e.group==g&&!e.addG?'on':''}" onclick="grpPick(${i})">${esc(g)}</button>`).join('')}<button class="chip ${e.addG?'on':''}" onclick="grpSel('+new')">＋ 新增商品類別</button></div></div>
 ${e.addG?`<div class="li"><input id="gnew" placeholder="新分組名稱"><button class="lnk" onclick="grpOk()">新增</button></div>`:''}
-<div class="li"><span class="rw">${ic('tag','#2f2f33')}單價成本</span><input type="number" inputmode="numeric" style="width:40%;text-align:right" placeholder="選填" value="${esc(e.cost)}" oninput="E.cost=this.value"></div></div>
+<div class="li"><span class="rw">${ic('tag','#2f2f33')}單價成本</span><input type="number" inputmode="numeric" style="width:40%;text-align:right" value="${esc(e.cost)}" oninput="E.cost=this.value"></div></div>
 ${id?`<button class="btn o" style="width:100%;margin-top:14px;color:var(--red)" onclick="delP(${id})">刪除${cb?'set':'商品'}</button>`:''}</div>`);const nb=document.querySelector('#md .sbody');if(nb)nb.scrollTop=st}
 function imgFile(f){if(!f)return;const r=new FileReader();r.onload=()=>imgOpen(r.result);r.onerror=()=>toast('圖片讀取失敗');r.readAsDataURL(f)}
 function pimg(inp){const f=inp.files[0];inp.value='';imgFile(f)}
@@ -840,7 +840,12 @@ h.onpointerup=h.onpointercancel=()=>{h.onpointermove=null;if(to==i){r2();return}
 function prodCopy(id){const i=S.products.findIndex(p=>p.id==id);if(i<0)return;const c=JSON.parse(JSON.stringify(S.products[i]));c.id=Date.now();c.name+=' 複製';S.products.splice(i+1,0,c);save();render();toast('已複製商品')}
 async function delP(id){if(await ask('確認刪除？'))rmP(id)}
 function rmP(id){S.products=S.products.filter(p=>p.id!=id);S.products.forEach(p=>{if(p.combo)p.combo=p.combo.filter(c=>c.pid!=id)});delete cart[id];delete gift[id];save();closeM();render()}
-let TALL=0,ANI=0;function openM(h){$('#md').className='sheet'+(TALL?' tall':'')+(ANI?' up':'');TALL=0;ANI=0;$('#md').innerHTML=h;$('#md_m').classList.add('on')}
+let TALL=0,ANI=0;function openM(h){const m0=$('#md');m0.style.transform='';m0.style.transition='';$('#md').className='sheet'+(TALL?' tall':'')+(ANI?' up':'');TALL=0;ANI=0;$('#md').innerHTML=h;$('#md_m').classList.add('on');shDrag()}
+function shDrag(){const m=$('#md'),sh=m.querySelector('.sh');if(!sh)return;sh.style.touchAction='none';let y0=null;
+sh.addEventListener('pointerdown',e=>{if(e.target.closest('button,input'))return;y0=e.clientY;try{sh.setPointerCapture(e.pointerId)}catch(_){}m.style.transition='none'});
+sh.addEventListener('pointermove',e=>{if(y0==null)return;m.style.transform='translateY('+Math.max(0,e.clientY-y0)+'px)'});
+const end=e=>{if(y0==null)return;const dy=e.clientY-y0;y0=null;m.style.transition='transform .2s';if(dy>90){m.style.transform='translateY(100%)';setTimeout(()=>{closeM();m.style.transition='';m.style.transform=''},200)}else{m.style.transform='';setTimeout(()=>{m.style.transition=''},200)}};
+sh.addEventListener('pointerup',end);sh.addEventListener('pointercancel',end)}
 function closeM(){$('#md_m').classList.remove('on');if(PR){PR=false;render()}}
 /* ---- icons ---- */
 const sv=d=>'<svg class="ic" viewBox="0 0 24 24" fill-rule="evenodd"><path d="'+d+'"/></svg>';
