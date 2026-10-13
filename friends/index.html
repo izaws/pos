@@ -367,7 +367,7 @@ const lsave=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast(
 const save=()=>{lsave();qstate()};
 /* ---- sync (Supabase) ---- */
 const QK=KEY+'_q';let Q=[];try{Q=JSON.parse(localStorage.getItem(QK)||'[]')}catch(e){}
-const VER='v9.3.12 Friends · 2026-10-13';
+const VER='v9.3.13 Friends · 2026-10-13';
 let sb=null,USER=null,chan=null,flushing=false,ft=null,pt=null,PR=false,SYNERR=false,SYNMSG='',IMGERR='',LASTSIG='';
 let REMOTE_PENDING=new Set(),REMOTE_DONE=new Set(),LOCAL_DONE=new Map(),PENDING_TABLE_OK=true,pendingFetchBusy=false,lastPendingFetch=0;
 let PENDING_RETRY_AT=0, pendingErrorCount=0;
@@ -702,7 +702,7 @@ ${rowIO('銷售資料','.json,application/json','impS','expS()')}
 <div class="sec">使用量</div><div class="grp">
 <div class="li"><span class="sub" style="margin:0">照片</span><span id="uph" style="font-size:14px">計算中…</span></div>
 <div class="li"><span class="sub" style="margin:0">資料</span><span id="udt" style="font-size:14px">計算中…</span></div>
-<div class="li"><span class="sub" style="margin:0">免費額度</span><span style="font-size:13px;color:var(--sub)">照片 1 GB・資料庫 500 MB</span></div></div>
+</div>
 <div class="sec">分類新增與跨裝置同步說明</div>
 <div class="grp" style="padding:16px;line-height:1.75;font-size:13px;color:var(--tx)">
 <b>商品分類與新增</b><div class="sub">在商品管理新增或修改分類、商品、場次、價格及優惠後，會先保存在目前裝置，再嘗試上傳雲端。其他裝置須使用同一收銀機帳號並連上網路，才會收到更新。離線期間新增的分類只會先顯示在該裝置；兩台同時修改分類或商品時，可能以較晚同步的版本為準。</div>
@@ -896,8 +896,8 @@ async function loadUsage(){
  // The optional authenticated RPC reads limits configured in Supabase itself.
  let limits=null;
  if(sb&&USER){try{const r=await sb.rpc('pos_usage_limits');if(!r.error&&r.data){const x=Array.isArray(r.data)?r.data[0]:r.data;if(x&&Number.isFinite(+x.photos_bytes)&&Number.isFinite(+x.data_bytes))limits=x}}catch(e){}}
- const photoLimit=limits?' / '+fmtB(+limits.photos_bytes):' / 未提供額度';
- const dataLimit=limits?' / '+fmtB(+limits.data_bytes):' / 未提供額度';
+ const photoLimit=' / 1 GB';
+ const dataLimit=' / 500 MB';
  let n=0,b=0;
  if(sb&&USER){try{let off=0;for(;;){const r=await sb.storage.from('product-images').list(USER.id,{limit:100,offset:off});if(r.error)throw r.error;const files=r.data||[];files.forEach(f=>{if(f.id){n++;b+=(f.metadata&&f.metadata.size)||0}});if(files.length<100)break;off+=100}}catch(e){ph.textContent='無法讀取照片容量'+photoLimit;return}}
  else{ph.textContent='未登入，無法讀取照片容量'+photoLimit;return}
