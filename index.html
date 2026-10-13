@@ -272,7 +272,7 @@ const lsave=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast(
 const save=()=>{lsave();qstate()};
 /* ---- sync (Supabase) ---- */
 const QK=KEY+'_q';let Q=[];try{Q=JSON.parse(localStorage.getItem(QK)||'[]')}catch(e){}
-const VER='v9.3.9 · 2026-10-13';
+const VER='v9.3.10 · 2026-10-13';
 let sb=null,USER=null,chan=null,flushing=false,ft=null,pt=null,PR=false,SYNERR=false,SYNMSG='',IMGERR='',LASTSIG='';
 let REMOTE_PENDING=new Set(),REMOTE_DONE=new Set(),LOCAL_DONE=new Map(),PENDING_TABLE_OK=true,pendingFetchBusy=false,lastPendingFetch=0;
 let PENDING_RETRY_AT=0, pendingErrorCount=0;
@@ -285,7 +285,7 @@ function qstate(){if(!SB_URL)return;if(!Q.some(q=>q.t=='state')){Q.push({t:'stat
 const qo=id=>qpush({t:'o',id}),qod=id=>qpush({t:'od',id}),qoev=ev=>qpush({t:'oev',ev});
 function pendingProductIds(){const ids=new Set(REMOTE_PENDING);for(const q of Q){if(q.t!=='o'&&q.t!=='sale_state')continue;const o=S.orders.find(x=>String(x.id)===String(q.id));if(!o)continue;for(const i of o.items||[]){ids.add(String(i.pid));const p=P(i.pid);for(const c of (p&&p.combo)||[])ids.add(String(c.pid))}}return ids}
 function completedProductIds(){const ids=new Set(REMOTE_DONE);const now=Date.now();for(const [id,until] of LOCAL_DONE){if(until<=now)LOCAL_DONE.delete(id);else ids.add(id)}return ids}
-function markLocalCompleted(o){if(!o)return;const until=Date.now()+2000;for(const id of pendingIdsForOrder(o))LOCAL_DONE.set(id,until);if(cur===0)r0();setTimeout(()=>{if(cur===0)r0()},2100)}
+function markLocalCompleted(o){if(!o)return;const until=Date.now()+1500;for(const id of pendingIdsForOrder(o))LOCAL_DONE.set(id,until);if(cur===0)r0();setTimeout(()=>{if(cur===0)r0()},1600)}
 // Shared pending status. Requires the accompanying SQL migration. Failures never block checkout.
 const pendingIdsForOrder=o=>[...new Set((o.items||[]).flatMap(i=>{const p=P(i.pid);return [String(i.pid),...((p&&p.combo)||[]).map(c=>String(c.pid))]}))];
 async function fetchRemotePending(){
@@ -298,8 +298,8 @@ async function fetchRemotePending(){
   const now=Date.now(),pending=new Set(),done=new Set();
   for(const row of data||[]){
    const isDone=row.status==='done';
-   // Completion is visible for only 2 seconds, regardless of cloud retention time.
-   if(isDone && (!row.completed_at || now-new Date(row.completed_at).getTime()>2000))continue;
+   // Completion is visible for only 1.5 seconds, regardless of cloud retention time.
+   if(isDone && (!row.completed_at || now-new Date(row.completed_at).getTime()>1500))continue;
    for(const id of row.product_ids||[])(isDone?done:pending).add(String(id));
   }
   const changed=JSON.stringify([[...pending].sort(),[...done].sort()])!==JSON.stringify([[...REMOTE_PENDING].sort(),[...REMOTE_DONE].sort()]);
