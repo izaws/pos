@@ -267,7 +267,7 @@ const lsave=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast(
 const save=()=>{lsave();qstate()};
 /* ---- sync (Supabase) ---- */
 const QK=KEY+'_q';let Q=[];try{Q=JSON.parse(localStorage.getItem(QK)||'[]')}catch(e){}
-const VER='v9 · 2026-10-13';
+const VER='v9.1 · 2026-10-13';
 let sb=null,USER=null,chan=null,flushing=false,ft=null,pt=null,PR=false,SYNERR=false,SYNMSG='',IMGERR='',LASTSIG='';
 const SL=[];let RTS='',ASKING=false;const slog=m=>{SL.push(new Date().toTimeString().slice(0,8)+' '+m);if(SL.length>25)SL.shift()};
 const errMsg=e=>(e&&(e.message||e.error_description||e.code))||String(e||'未知錯誤');
@@ -494,11 +494,11 @@ ${rowIO('場次資料','.json,application/json','impE','expE()')}
 ${rowIO('銷售資料','.json,application/json','impS','expS()')}
 </div>
 <div class="cap">商品資料可匯入 CSV（名稱,價格,庫存）或本 App 匯出的檔案，同名商品會更新。</div>
+<div class="sec">帳號與同步</div><div class="grp">${accHtml()}</div>
 <div class="sec">使用量</div><div class="grp">
 <div class="li"><span class="sub" style="margin:0">照片</span><span id="uph" style="font-size:14px">計算中…</span></div>
 <div class="li"><span class="sub" style="margin:0">資料</span><span id="udt" style="font-size:14px">計算中…</span></div>
-<div class="li"><span class="sub" style="margin:0">免費額度</span><span style="font-size:13px;color:var(--sub)">照片 1 GB・資料庫 500 MB</span></div>
-${USER?`<div class="li" onclick="doLogout()"><span style="color:var(--red)">登出</span></div>`:''}</div>`;swipe('#evl ');loadUsage()}
+<div class="li"><span class="sub" style="margin:0">免費額度</span><span style="font-size:13px;color:var(--sub)">照片 1 GB・資料庫 500 MB</span></div></div>`;swipe('#evl ');loadUsage()}
 function evCopy(id){const e=S.events.find(x=>x.id==id),nid=Date.now();S.products.forEach(p=>{if(inEv(p,id))p.evs[nid]=p.evs[id]});S.events.push({id:nid,name:e.name+' 複製'});save();r3();toast('已複製場次')}
 async function evDel(id){if(S.events.length<2)return toast('至少要留一個場次');if(!await ask('確認刪除？'))return;S.events=S.events.filter(e=>e.id!=id);S.orders=S.orders.filter(o=>o.ev!=id);S.products.forEach(p=>{if(p.evs)delete p.evs[id]});const gone=S.products.filter(p=>!Object.keys(p.evs||{}).length).map(p=>p.id);S.products=S.products.filter(p=>!gone.includes(p.id));S.products.forEach(p=>{if(p.combo)p.combo=p.combo.filter(c=>!gone.includes(c.pid))});if(S.cur==id)S.cur=S.events[0].id;save();qoev(id);render();toast('已刪除')}
 function ask(m,y){return new Promise(ok=>{const d=$('#ask');d.innerHTML=`<div class="ab"><p>${esc(m)}</p><div><button class="p2" id="ano">取消</button><button class="p2" id="ays" style="background:var(--red);color:#fff">${esc(y||'刪除')}</button></div></div>`;d.classList.add('on');const f=v=>{d.classList.remove('on');ok(v)};$('#ano').addEventListener('click',()=>f(false));$('#ays').addEventListener('click',()=>f(true))})}
