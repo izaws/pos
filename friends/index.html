@@ -510,7 +510,7 @@ async function startSync(){
  }else{
    await flush();await pull();
  }
- subscribe();fetchRemotePending();setSync();
+ subscribe();fetchRemotePending();setSync();sbActivityAuto();
 }
 async function initSB(){if(!SB_URL||!SB_KEY){friendSetup();return}if(!window.supabase){SYNERR=true;SYNMSG='Supabase 程式庫未載入';setSync();return}
 sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
@@ -686,7 +686,21 @@ function grpDel(i){const o=S.groups[i];S.groups.splice(i,1);S.products.forEach(p
 const tgl=(on,fn)=>`<button class="tg ${on?'on':''}" onclick="${fn}"></button>`;
 const rowC=(ic,col,t,fn,r='',nav=1)=>`<div class="li" onclick="${fn}"><span class="rw"><i class="bk">${I[ic]}</i>${t}</span><span class="rw" style="gap:6px">${r}${nav?I.chev:''}</span></div>`;
 const rowF=(ic,col,t,acc,fn)=>`<label class="li"><span class="rw"><i class="bk">${I[ic]}</i>${t}</span>${I.chev}<input type="file" accept="${acc}" hidden onchange="${fn}(this.files[0]);this.value=''"></label>`;
-function r3(){r3x();setSync()}
+/* Supabase activity: per-project local observations, not Supabase's official idle counter. */
+const sbActivityKey=()=> 'pos_sb_activity_'+(SB_URL||'unconfigured');
+function sbActivityGet(){try{return JSON.parse(localStorage.getItem(sbActivityKey())||'{}')}catch(e){return {}}}
+function sbActivitySave(patch){const v={...sbActivityGet(),...patch};try{localStorage.setItem(sbActivityKey(),JSON.stringify(v))}catch(e){}return v}
+function sbActivityDate(ts){return ts?new Date(ts).toLocaleString('zh-TW',{hour12:false}):'尚無紀錄'}
+function sbActivityDays(ts){return ts?Math.floor((Date.now()-new Date(ts).getTime())/86400000):null}
+function sbActivityReminder(){const v=sbActivityGet(),d=sbActivityDays(v.lastSuccess);if(v.enabled===false||!SB_URL||!USER)return;if(d===null||d>=5){const today=new Date().toLocaleDateString('en-CA');if(v.lastReminder!==today){sbActivitySave({lastReminder:today});setTimeout(()=>toast('Supabase 已超過 5 天未確認連線，請到設定檢查'),1100)}}}
+async function sbActivityCheck(manual=false){const status=document.getElementById('sbactstatus');if(status)status.textContent='檢查中…';if(!sb||!USER){if(status)status.textContent='請先登入 Supabase';if(manual)toast('請先登入 Supabase');return false}
+try{const {error}=await sb.from('pos_state').select('user_id').eq('user_id',USER.id).limit(1);if(error)throw error;sbActivitySave({lastSuccess:new Date().toISOString(),lastError:''});if(status)status.textContent='連線正常';if(manual)toast('Supabase 查詢成功');return true}catch(e){sbActivitySave({lastError:String(e.message||e)});if(status)status.textContent='連線失敗';if(manual)toast('連線失敗，請查看登入與網路');return false}finally{if(document.getElementById('sbactlast'))sbActivityRefresh()}}
+function sbActivityRefresh(){const v=sbActivityGet(),d=sbActivityDays(v.lastSuccess);const last=document.getElementById('sbactlast'),days=document.getElementById('sbactdays');if(last)last.textContent=sbActivityDate(v.lastSuccess);if(days)days.textContent=d===null?'尚無紀錄':d+' 天';const hint=document.getElementById('sbacthint');if(hint)hint.textContent=d===null?'尚未檢查':d>=5?'需要檢查':'最近 '+d+' 天'}
+function sbActivityToggle(){const v=sbActivityGet();sbActivitySave({enabled:v.enabled===false});sbActivityPanel()}
+function sbActivityPanel(){const v=sbActivityGet(),d=sbActivityDays(v.lastSuccess),enabled=v.enabled!==false;openM(`<h3>Supabase 活動偵測</h3><div class="grp"><div class="li"><span>資料庫連線</span><b id="sbactstatus" style="font-size:14px">${v.lastError?'上次檢查失敗':v.lastSuccess?'上次檢查成功':'尚未檢查'}</b></div><div class="li"><span>最近成功連線</span><span id="sbactlast" style="font-size:13px;text-align:right">${sbActivityDate(v.lastSuccess)}</span></div><div class="li"><span>距離上次確認</span><span id="sbactdays">${d===null?'尚無紀錄':d+' 天'}</span></div></div><div class="sec">提醒設定</div><div class="grp"><div class="li"><span>開啟 5 天未確認提醒</span><button class="tg ${enabled?'on':''}" onclick="sbActivityToggle()" aria-label="切換提醒"></button></div></div><p class="cap">開啟 POS 且已登入時，每天最多自動執行一次輕量資料庫查詢。這裡顯示的是此裝置觀察到的成功查詢，不是 Supabase 官方的最後活動時間。提醒只會在開啟 POS 時顯示，無法保證專案不被暫停。</p><button class="btn" style="width:100%" onclick="sbActivityCheck(true)">立即檢查並產生資料庫活動</button><button class="btn o" style="width:100%;margin-top:10px" onclick="window.open('https://supabase.com/dashboard/projects','_blank','noopener,noreferrer')">↗ 開啟 Supabase 控制台</button>`)}
+function sbActivityAuto(){if(!SB_URL||!sb||!USER)return;const v=sbActivityGet();sbActivityReminder();if(!v.lastSuccess||Date.now()-new Date(v.lastSuccess).getTime()>=86400000)sbActivityCheck(false)}
+
+function r3(){r3x();setSync();sbActivityRefresh()}
 function r3x(){$('#p3').innerHTML=`<h1>設定</h1>
 <div class="sec">場次</div><div class="grp" id="evl" style="padding:0;overflow:hidden">${S.events.map(e=>`<div class="sw evr s2"><button class="cp2" onclick="evCopy(${e.id})">複製</button><button class="del" onclick="evDel(${e.id})">刪除</button><div class="in" ${e.id==EVR?'':`onclick="evRenStart(${e.id})"`}>${e.id==EVR?`<div class="row" style="gap:8px"><input id="evi" style="flex:1;min-width:0;padding:9px 12px;background:var(--bg)" value="${esc(e.name)}" onkeydown="if(event.key=='Enter')evRenOk(${e.id});if(event.key=='Escape')evRenCancel()"><button class="p2 sm" onclick="evRenCancel()">取消</button><button class="p2 sm" style="background:var(--ac);color:#fff" onclick="evRenOk(${e.id})">確認</button></div>`:`<div class="row"><span>${esc(e.name)}</span>${e.id==S.cur?`<span class="ck">${I.check}目前場次</span>`:''}</div>`}</div></div>`).join('')}
 <div class="li" style="padding:14px 16px"><button class="lnk" onclick="evAdd()">＋ 新增場次</button></div></div>
@@ -696,6 +710,7 @@ ${S.rules.full.map((r,i)=>`<div class="li" onclick="ruleEd('full',${i})"><span>�
 <div class="li"><b>消費禮</b><button class="lnk" onclick="ruleEd('buy',-1)">＋ 新增</button></div>
 ${S.rules.buy.map((r,i)=>`<div class="li" onclick="ruleEd('buy',${i})"><span>${bLabel(r)?'買 '+esc(bLabel(r)):'任一消費'}　${esc(giftName(r))}</span>${I.chev}</div>`).join('')}</div>
 <div class="sec">一般</div><div class="grp">${rowC('palette','#5b5bd6','設定顏色','colorM()','<i style="width:26px;height:26px;border-radius:50%;background:var(--g);display:block"></i>')}</div>
+<div class="sec">Supabase 維護</div><div class="grp">${rowC('palette','#555','Supabase 活動偵測','sbActivityPanel()','<span id="sbacthint" style="font-size:12px;color:var(--sub)">查看狀態</span>')}</div>
 <div class="sec">資料匯入／匯出</div><div class="grp">
 ${rowIO('全部資料','.json,application/json','impA','expA()')}
 ${rowIO('商品資料','.csv,.txt,.json,text/csv,application/json','impP','expP()')}
