@@ -710,7 +710,7 @@ ${S.rules.full.map((r,i)=>`<div class="li" onclick="ruleEd('full',${i})"><span>�
 <div class="li"><b>消費禮</b><button class="lnk" onclick="ruleEd('buy',-1)">＋ 新增</button></div>
 ${S.rules.buy.map((r,i)=>`<div class="li" onclick="ruleEd('buy',${i})"><span>${bLabel(r)?'買 '+esc(bLabel(r)):'任一消費'}　${esc(giftName(r))}</span>${I.chev}</div>`).join('')}</div>
 <div class="sec">一般</div><div class="grp">${rowC('palette','#5b5bd6','設定顏色','colorM()','<i style="width:26px;height:26px;border-radius:50%;background:var(--g);display:block"></i>')}</div>
-<div class="sec">Supabase 維護</div><div class="grp">${rowC('palette','#555','Supabase 活動偵測','sbActivityPanel()','<span id="sbacthint" style="font-size:12px;color:var(--sub)">查看狀態</span>')}</div>
+<div class="sec">Supabase 維護</div><div class="grp"><div class="li" onclick="sbActivityPanel()"><span>Supabase 活動偵測</span><span class="rw" style="gap:6px"><span id="sbacthint" style="font-size:12px;color:var(--sub)">查看狀態</span>${I.chev}</span></div></div>
 <div class="sec">資料匯入／匯出</div><div class="grp">
 ${rowIO('全部資料','.json,application/json','impA','expA()')}
 ${rowIO('商品資料','.csv,.txt,.json,text/csv,application/json','impP','expP()')}
