@@ -292,7 +292,9 @@ input,select,textarea{font-size:16px!important}
 .pf-rq{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--sub)}.pf-rq input{width:16px;height:16px;padding:0}
 .pf-x{border:0;background:none;color:var(--sub);padding:4px;display:flex;flex:none}.pf-x .ic{width:20px;height:20px}
 input.pf-lab{background:none;border:0;border-bottom:1.5px dashed var(--ln);border-radius:0;padding:6px 0;font-weight:600}
-input.pf-lab.big{font-size:20px!important;font-weight:700}
+input.pf-lab.hd{font-size:20px!important;font-weight:700;color:var(--tx)}
+.tpl-tb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}.tpl-tb .chip,.tpl-tb select{font-size:13px;padding:6px 10px;border-radius:999px;border:0;background:var(--chip);color:var(--tx)}.tpl-tb label.chip{display:inline-flex;align-items:center;gap:6px}.tpl-tb input[type=color]{width:22px;height:22px;padding:0;border:0;background:none}
+.tpl-ed{background:var(--card);border-radius:14px;padding:14px 16px;min-height:220px;font-size:15px;line-height:1.7;outline:none;word-break:break-word}.tpl-ed:focus{box-shadow:0 0 0 2px var(--ln)}
 input.pf-lab.sec{background:none;border:0;border-bottom:1.5px dashed var(--ln);border-radius:0;padding:6px 0;color:var(--tx);font-size:18px;font-weight:700}
 .pf-blk textarea{background:var(--bg);border-radius:12px;padding:10px;resize:vertical;margin-top:6px}
 .pf-mini{background:var(--bg)!important;border-radius:10px;padding:9px 11px;margin-top:6px}
@@ -850,6 +852,7 @@ function pfProdPick(keep){if(!keep)ANI=1;TALL=1;const ps=S.products.filter(p=>in
  openM(`<div class="sh row"><button class="p2" onclick="pfPickAll(1)">全選</button><b style="font-size:17px">選擇商品</b><button class="p2" style="background:var(--ac);color:#fff" onclick="closeM()">完成</button></div><div class="sbody"><div class="row" style="margin-bottom:4px"><span class="sub">點選商品加入表單（已選 ${PRC.pids.length}）</span><button class="p2 sm" onclick="pfPickAll(0)">清空</button></div><div class="grid pf-grid">${ps.map(p=>{const on=PRC.pids.includes(p.id),r=remOf(p,S.cur);return `<div class="card ${on?'in':''}" onclick="pfPickTog(${p.id},this)"><div class="imw"><div class="im" style="${p.img?`background-image:url(${p.img})`:''}">${p.img?'':I.gift}</div>${r!=null?`<div class="stk ${r<=0?'z':''}">${r<=0?'售罄':r}</div>`:''}<span class="pf-tick">${I.check}</span></div><div class="nm">${esc(p.name)}</div><div class="pr">$ ${fmt2(p.price)}</div></div>`}).join('')||'<div class="empty" style="grid-column:1/-1">這個場次沒有商品</div>'}</div></div>`)}
 function pfPickTog(id,el){const a=PRC.pids,i=a.indexOf(id);if(i>=0)a.splice(i,1);else a.push(id);el.classList.toggle('in',i<0);pfProdRef()}
 function pfPickAll(on){PRC.pids=on?S.products.filter(p=>inEv(p,S.cur)&&!p.off).map(p=>p.id):[];pfProdRef();pfProdPick(1)}
+function pfAl(b){return `<div class="sub" style="margin:10px 0 4px">對齊方式</div><div class="chips" style="margin:0">${[['left','靠左'],['center','置中'],['right','靠右']].map(x=>`<button class="chip ${(b.align||'left')==x[0]?'on':''}" onclick="pfSetB('${b.id}','align','${x[0]}');pfEdit(1)">${x[1]}</button>`).join('')}</div>`}
 function pfBlk(b){
  const t=b.type,cp=!(t=='products'||t=='pickup');
  const hd=`<span class="pf-hd" onpointerdown="pfDrag(event,'${b.id}')">${I.menu}</span>`;
@@ -862,11 +865,11 @@ function pfBlk(b){
  else if(t=='pickup'){body=`${lab('標題')}${b.opts.map((o,j)=>`<div class="pf-opt"><span class="pf-dot"></span><input value="${esc(o.label)}" oninput="pfSetOpt('${b.id}',${j},this.value)"></div>`).join('')}`}
  else if(['select','radio','checkbox'].includes(t)){body=`${lab('問題標題')}${b.opts.map((o,j)=>`<div class="pf-opt"><span class="pf-dot ${t=='checkbox'?'sq':''}"></span><input value="${esc(o)}" oninput="pfSetOpt('${b.id}',${j},this.value)"><button class="pf-x" onclick="pfDelOpt('${b.id}',${j})">${I.trash}</button></div>`).join('')}<button class="p2 sm" style="margin-top:8px" onclick="pfAddOpt('${b.id}')">＋ 新增選項</button>`}
  else if(t=='agree'){body=`<div class="pf-opt"><span class="pf-dot sq"></span><input class="pf-lab" style="margin:0" value="${esc(b.label||'')}" placeholder="例如：我同意以上條款" oninput="pfSetB('${b.id}','label',this.value)"></div>`}
- else if(t=='heading'){body=`${lab('標題','big')}<textarea rows="2" placeholder="內文（選填）" oninput="pfSetB('${b.id}','text',this.value)">${esc(b.text||'')}</textarea>`}
- else if(t=='note'){body=`<textarea rows="3" placeholder="輸入說明文字" oninput="pfSetB('${b.id}','text',this.value)">${esc(b.text||'')}</textarea>`}
+ else if(t=='heading'){body=`${lab('標題','hd')}<textarea rows="2" placeholder="內文（選填）" oninput="pfSetB('${b.id}','text',this.value)">${esc(b.text||'')}</textarea>${pfAl(b)}`}
+ else if(t=='note'){body=`<textarea rows="3" placeholder="輸入說明文字" oninput="pfSetB('${b.id}','text',this.value)">${esc(b.text||'')}</textarea>${pfAl(b)}`}
  else if(t=='divider'){body='<div class="pf-hr"></div>'}
  else if(t=='image'){body=`${b.url?`<div class="pf-imw" style="${pfImgSt(b)}"><img src="${esc(b.url)}" alt="" draggable="false">${['tl','tr','bl','br'].map(h=>`<i class="pf-hd2 ${h}" onpointerdown="pfImgRs(event,'${b.id}','${h}')"></i>`).join('')}<span class="pf-sz">${b.size||100}%</span></div><div class="sub" style="margin:8px 0 0;font-size:12px">拖曳圖片四個角可以放大縮小</div>`:'<div class="pf-img ph">尚未選擇圖片</div>'}<input class="pf-mini" value="${esc(b.url||'')}" placeholder="貼上圖片（或圖片網址）" autocomplete="off" autocapitalize="off" onpaste="pfPasteImg(event,'${b.id}')" oninput="pfSetB('${b.id}','url',this.value)" onchange="pfEdit(1)"><label class="p2 sm" style="display:inline-block;margin-top:8px">上傳圖片<input type="file" accept="image/*" hidden onchange="pfImg('${b.id}',this.files[0]);this.value=''"></label><div class="sub" style="margin:10px 0 4px">對齊方式</div><div class="chips" style="margin:0">${[['left','靠左'],['center','置中'],['right','靠右']].map(x=>`<button class="chip ${(b.align||'center')==x[0]?'on':''}" onclick="pfSetB('${b.id}','align','${x[0]}');pfEdit(1)">${x[1]}</button>`).join('')}</div>`}
- else if(t=='section'){body=lab('區塊標題','sec')}
+ else if(t=='section'){body=lab('區塊標題','sec')+pfAl(b)}
  else{const prev=t=='textarea'?`<textarea rows="2" disabled placeholder="${esc(b.ph||'')}"></textarea>`:`<input disabled type="text" placeholder="${esc(b.ph||'')}">`;
   body=`${lab('欄位標題')}${['text','textarea','email','url','tel','number'].includes(t)?ph():''}<div class="pf-prev" style="margin-top:6px">${prev}</div>`}
  return `<div class="sw pf-blk ${cp?'s2':''}" data-b="${b.id}">${cp?`<button class="cp2" onclick="pfCopy('${b.id}')">複製</button>`:''}<button class="del" onclick="pfDel('${b.id}')">刪除</button><div class="in"><div class="pf-bh">${hd}<span class="tag">${PF_N[t]}</span>${rq}${del}</div>${body}</div></div>`}
@@ -960,9 +963,10 @@ function pfDeadlineCheck(){const d=S.pre.deadline;if(!S.pre.open||!d)return;cons
 setInterval(pfDeadlineCheck,15000);setTimeout(pfDeadlineCheck,1500);
 /* 預覽表單（客人看到的樣子，不會真的送出） */
 function pvField(b){const t=b.type,L=`<div class="pv-l">${esc(b.label||'')}${b.req?'<i>*</i>':''}</div>`,p=esc(b.ph||'');
- if(t=='section')return `<div class="pv-sec">${esc(b.label||'')}</div>`;
- if(t=='heading')return `<div class="pv-hd">${esc(b.label||'')}</div>${b.text?`<div class="pv-tx">${esc(b.text)}</div>`:''}`;
- if(t=='note')return `<div class="pv-tx">${esc(b.text||'')}</div>`;
+ const AL=`text-align:${b.align||'left'}`;
+ if(t=='section')return `<div class="pv-sec" style="${AL}">${esc(b.label||'')}</div>`;
+ if(t=='heading')return `<div class="pv-hd" style="${AL}">${esc(b.label||'')}</div>${b.text?`<div class="pv-tx" style="${AL}">${esc(b.text)}</div>`:''}`;
+ if(t=='note')return `<div class="pv-tx" style="${AL}">${esc(b.text||'')}</div>`;
  if(t=='divider')return '<div class="pf-hr"></div>';
  if(t=='image')return b.url?`<img class="pf-img" style="${pfImgSt(b)}" src="${esc(b.url)}" alt="">`:'';
  if(t=='products')return `<div id="pvprod"></div>`;
@@ -1014,7 +1018,11 @@ function pvSwipe(){const el=$('#pvim'),k=$('#pvtrk');if(!el||!k)return;let x0=nu
  el.onpointerup=end;el.onpointercancel=end}
 function pvDQ(k,d){PVQ[k]=Math.max(0,(PVQ[k]||0)+d);pvDR();pvProd()}
 function pvClose(){const d=$('#pvd');if(d)d.classList.remove('on');PVD=null}
-function pvZoom(){const p=P(PVD);if(!p)return;const im=pvImgs(p);let z=$('#pvz');if(!z){z=document.createElement('div');z.id='pvz';z.onclick=()=>z.classList.remove('on');document.body.appendChild(z)}
+function pvZoom(){const p=P(PVD);if(!p)return;const im=pvImgs(p);let z=$('#pvz');if(!z){z=document.createElement('div');z.id='pvz';z.style.touchAction='pan-y';let x0=null,dx=0,mv=0;z.onclick=()=>{if(mv){mv=0;return}z.classList.remove('on')};
+ z.onpointerdown=e=>{x0=e.clientX;dx=0;mv=0;try{z.setPointerCapture(e.pointerId)}catch(_){}};
+ z.onpointermove=e=>{if(x0==null)return;dx=e.clientX-x0;if(Math.abs(dx)>8)mv=1;const m=z.querySelector('img');if(m&&mv){m.style.transition='none';m.style.transform=`translateX(${dx}px)`}};
+ const end=()=>{if(x0==null)return;const d=dx;x0=null;const pp=P(PVD),n=pp?pvImgs(pp).length:0;if(mv&&n>1&&Math.abs(d)>50){PVI=(PVI+(d<0?1:n-1))%n;pvGo(PVI);pvZoom()}else{const m=z.querySelector('img');if(m){m.style.transition='transform .15s';m.style.transform=''}}setTimeout(()=>{mv=0},60)};
+ z.onpointerup=end;z.onpointercancel=end;document.body.appendChild(z)}
  z.innerHTML=`<img src="${esc(im[PVI])}" alt="">${im.length>1?`<button class="pvz-a l" onclick="event.stopPropagation();PVI=(PVI+${im.length-1})%${im.length};pvGo(PVI);pvZoom()">‹</button><button class="pvz-a r" onclick="event.stopPropagation();PVI=(PVI+1)%${im.length};pvGo(PVI);pvZoom()">›</button>`:''}<span class="pvz-x">×</span>`;z.classList.add('on')}
 function pfPreview(){PVQ={};PVP='onsite';PVC='';PVW=[];pvClose();TALL=1;ANI=1;openM(`<div class="sh row"><span style="width:56px"></span><b style="font-size:17px">預覽表單</b><button class="p2" onclick="closeM()">關閉</button></div><div class="sbody"><div class="pv"><div class="pv-t">${esc(PRC.title||'（尚未填寫標題）')}</div>${PRC.note?`<div class="pv-tx">${esc(PRC.note)}</div>`:''}${PRC.blocks.map(b=>`<div class="pv-b">${pvField(b)}</div>`).join('')}<div class="row" style="margin-top:18px"><button class="p2" onclick="pfTestM('pfPreview()')">寄送測試信</button><button class="pf-btn" disabled style="opacity:.4">送出預購</button></div><div class="cap" style="text-align:center">預覽模式，不會真的送出</div></div></div>`);pvProd()}
 function pfApply(){PRC.blocks.forEach(b=>{if(['select','radio','checkbox'].includes(b.type)&&!Array.isArray(b.opts))b.opts=['選項 1','選項 2'];if(b.id==null)b.id=uid()});PRC.days=Math.max(1,Math.round(+PRC.days)||3);['title','note','bank','shop','api','sender'].forEach(k=>PRC[k]=String(PRC[k]||'').trim());
@@ -1031,17 +1039,47 @@ const TPL_INFO={copy:['填單副本','填單後自動寄出（客人填寫的內
 const TPL_VARS=['{暱稱}','{訂單編號}','{商品清單}','{總額}','{取貨方式}','{期限}','{匯款資訊}','{回報連結}','{賣場連結}','{填寫內容}','{店名}'];
 function tplM(fm){TPD=null;ANI=1;TALL=1;const back=fm?'pfMenu()':'closeM()';
  openM(`<div class="sh row"><button class="p2" onclick="${back}">${fm?'返回':'關閉'}</button><b style="font-size:17px">信件模板</b><span style="width:56px"></span></div><div class="sbody"><div class="cap" style="margin:0 0 10px">點選模板即可編輯與預覽。</div><div class="grp">${Object.keys(TPL_INFO).map(k=>`<div class="li" onclick="tplOpen('${k}',${fm?1:0})"><span style="min-width:0;flex:1"><b>${TPL_INFO[k][0]}</b><div class="sub" style="margin:2px 0 0">${TPL_INFO[k][1]}</div><div class="sub" style="margin:2px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw">${esc(S.pre.tpl[k].s)}</div></span>${I.chev}</div>`).join('')}</div><div class="grp" style="margin-top:12px"><div class="li" onclick="mailInfoM(${fm?1:0})"><span class="rw">匯款資訊與賣場連結</span>${I.chev}</div></div></div>`)}
-function tplOpen(k,fm){TPD={k,fm,s:S.pre.tpl[k].s,b:S.pre.tpl[k].b,v:0,s0:S.pre.tpl[k].s,b0:S.pre.tpl[k].b};tplR()}
+const tplT2H=t=>String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+function tplClean(html){const d=document.createElement('div');d.innerHTML=html;const OK=['SPAN','B','STRONG','I','EM','U','A','BR','DIV','P'],CSS=['color','background-color','font-size','font-weight','text-align','font-style','text-decoration'];
+ const walk=n=>{[...n.childNodes].forEach(c=>{if(c.nodeType==3)return;if(c.nodeType!=1){c.remove();return}walk(c);if(!OK.includes(c.tagName)){c.replaceWith(...c.childNodes);return}
+  [...c.attributes].forEach(a=>{const k=a.name;if(k=='style'){const st=c.style,keep=CSS.map(q=>st.getPropertyValue(q)?q+':'+st.getPropertyValue(q).replace(/[;"<>]/g,''):'').filter(Boolean).join(';');if(keep)c.setAttribute('style',keep);else c.removeAttribute('style')}else if(k=='href'&&c.tagName=='A'){if(!/^(https?:|mailto:|\{)/i.test(a.value))c.removeAttribute('href')}else c.removeAttribute(k)});
+  if(c.tagName=='A')c.setAttribute('target','_blank')})};walk(d);return d.innerHTML}
+const tplH2T=h=>{const d=document.createElement('div');d.innerHTML=String(h).replace(/<br\s*\/?>/gi,'\n').replace(/<\/(div|p)>/gi,'\n');return d.textContent.replace(/\n{3,}/g,'\n\n').trim()};
+function tplOpen(k,fm){const t=S.pre.tpl[k],h=t.h||tplT2H(t.b),lt=Object.assign({pay:'點此回報匯款',shop:'前往賣場'},S.pre.linkTxt||{});TPD={k,fm,s:t.s,h,v:0,lt,s0:t.s,h0:h,l0:JSON.stringify(lt)};tplR()}
 function tplFill(s,md){const d=new Date(Date.now()+(Math.max(1,+pfv('days')||3))*864e5),m={'{暱稱}':'小明','{訂單編號}':'0123','{商品清單}':'・商品 A ×2　$300\n・商品 B ×1　$150','{總額}':'$450','{取貨方式}':md=='ship'?'通販（賣場下單）':'現場取貨','{期限}':d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate(),'{匯款資訊}':pfv('bank')||'（尚未填寫匯款資訊）','{回報連結}':'https://（匯款回報頁面）','{賣場連結}':pfv('shop')||'https://（賣場連結）','{店名}':pfv('sender')||pfv('title')||'店名','{填寫內容}':'・商品：商品 A ×2、商品 B ×1\n・領取方式：現場取貨\n・暱稱：小明\n・社群網址：https://example.com\n・Email：test@example.com'};if(md=='ship'){m['{匯款資訊}']='';m['{期限}']='';m['{回報連結}']=''}else if(md=='onsite')m['{賣場連結}']='';return s.replace(/\{[^}]+\}/g,x=>x in m?m[x]:x)}
+let TPR=null;
+document.addEventListener('selectionchange',()=>{const e=document.getElementById('tp_b');if(!e)return;const sl=getSelection();if(sl.rangeCount&&e.contains(sl.anchorNode))TPR=sl.getRangeAt(0).cloneRange()});
+function tplRestore(){const e=$('#tp_b');if(!e)return false;e.focus();if(TPR){const sl=getSelection();sl.removeAllRanges();sl.addRange(TPR)}return true}
+function tplSync(){const e=$('#tp_b');if(e&&TPD)TPD.h=tplClean(e.innerHTML)}
+function tplCmd(c,v){if(!tplRestore())return;document.execCommand('styleWithCSS',false,true);document.execCommand(c,false,v==null?null:v);tplSync()}
+function tplSize(px){if(!px||!tplRestore())return;const sl=getSelection();if(!sl.rangeCount||sl.isCollapsed)return toast('請先選取文字');const dv=document.createElement('div');dv.appendChild(sl.getRangeAt(0).cloneContents());document.execCommand('insertHTML',false,`<span style="font-size:${px}">${dv.innerHTML}</span>`);tplSync()}
+function tplLink(){if(!tplRestore())return;const sl=getSelection(),sel=sl.toString();const u=prompt('連結網址（可填 {賣場連結}、{回報連結}）','https://');if(!u)return;const tx=prompt('顯示的文字',sel||'點此前往');if(!tx)return;document.execCommand('insertHTML',false,`<a href="${esc(u)}" target="_blank">${esc(tx)}</a>`);tplSync()}
+function tplIns(v){if(!tplRestore())return;document.execCommand('insertText',false,v);tplSync()}
+function tplFillH(h,md,lt){h=h.replace(/\{[^{}]*\}/g,m=>m.replace(/<[^>]+>/g,'')).replace(/href="\{([^}]+)\}"/g,(m,k)=>'href="'+esc(tplFill('{'+k+'}',md))+'"');return h.replace(/\{[^}]+\}/g,x=>{const v=tplFill(x,md);if(x=='{回報連結}'||x=='{賣場連結}')return v&&!/^https:\/\/（/.test(v)?`<a href="${esc(v)}">${esc(x=='{回報連結}'?lt.pay:lt.shop)}</a>`:(v?`<u>${esc(x=='{回報連結}'?lt.pay:lt.shop)}</u>`:'');return esc(v).replace(/\n/g,'<br>')})}
 function tplR(){const d=TPD,i=TPL_INFO[d.k];ANI=0;TALL=1;
  openM(`<div class="sh row"><button class="p2" onclick="tplBack()">返回</button><b style="font-size:17px">${i[0]}</b><button class="p2" style="background:var(--ac);color:#fff" onclick="tplSave()">儲存</button></div><div class="sbody"><div class="chips" style="margin-bottom:12px"><button class="chip ${d.v?'':'on'}" onclick="tplV(0)">編輯</button><button class="chip ${d.v?'on':''}" onclick="tplV(1)">預覽</button></div>
- ${d.v?`<div class="sub" style="margin:0 2px 8px">以範例資料預覽，實際寄出會換成該筆訂單的內容。</div><div class="pf-card" style="padding:16px"><div style="font-weight:700;font-size:16px;margin-bottom:10px">${esc(tplFill(d.s))}</div><div style="white-space:pre-wrap;line-height:1.7;font-size:15px">${esc(tplFill(d.b))}</div></div>`
- :`<div class="sub" style="margin:0 2px 6px">信件標題</div><input id="tp_s" value="${esc(d.s)}" oninput="TPD.s=this.value"><div class="sub" style="margin:14px 2px 6px">信件內容</div><textarea id="tp_b" rows="12" oninput="TPD.b=this.value">${esc(d.b)}</textarea><div class="sub" style="margin:12px 2px 6px">點一下插入欄位</div><div class="chips wrap" style="gap:6px">${TPL_VARS.map(v=>`<button class="chip" onmousedown="event.preventDefault()" onclick="tplIns('${v}')">${v}</button>`).join('')}</div><button class="btn o" style="width:100%;margin-top:16px" onclick="tplReset()">還原這封的預設內容</button>`}</div>`)}
-function tplV(v){TPD.v=v;tplR()}
-function tplIns(v){const t=$('#tp_b');if(!t)return;const a=t.selectionStart??t.value.length,b=t.selectionEnd??a;t.value=t.value.slice(0,a)+v+t.value.slice(b);t.focus();t.selectionStart=t.selectionEnd=a+v.length;TPD.b=t.value}
-async function tplBack(){const d=TPD;if((d.s!==d.s0||d.b!==d.b0)&&!await ask('有尚未儲存的修改，確定離開？','離開'))return;tplM(d.fm)}
-function tplSave(){const d=TPD;S.pre.tpl[d.k]={s:d.s,b:d.b};S.pre.ts=Date.now();save();toast('已儲存');tplM(d.fm)}
-async function tplReset(){if(!await ask('確認還原成預設內容？','還原'))return;const df=DEF_TPL()[TPD.k];TPD.s=df.s;TPD.b=df.b;tplR()}
+ ${d.v?`<div class="sub" style="margin:0 2px 8px">以範例資料預覽，實際寄出會換成該筆訂單的內容。</div><div class="pf-card" style="padding:16px"><div style="font-weight:700;font-size:16px;margin-bottom:10px">${esc(tplFill(d.s))}</div><div style="line-height:1.7;font-size:15px;word-break:break-word">${tplFillH(d.h,d.k=='store'?'ship':'onsite',d.lt)}</div></div>`
+ :`<div class="sub" style="margin:0 2px 6px">信件標題</div><input id="tp_s" value="${esc(d.s)}" oninput="TPD.s=this.value"><div class="sub" style="margin:14px 2px 6px">信件內容（選取文字後套用格式）</div>
+ <div class="tpl-tb" onmousedown="if(event.target.tagName!='SELECT'&&event.target.tagName!='INPUT')event.preventDefault()">
+  <button class="chip" onclick="tplCmd('bold')"><b>B</b></button>
+  <select onchange="tplSize(this.value);this.value=''"><option value="">字級</option><option value="12px">小</option><option value="15px">一般</option><option value="18px">大</option><option value="22px">特大</option></select>
+  <label class="chip">文字色<input type="color" value="#d32f2f" oninput="tplCmd('foreColor',this.value)"></label>
+  <label class="chip">底色<input type="color" value="#fff3a0" oninput="tplCmd('hiliteColor',this.value)"></label>
+  <button class="chip" onclick="tplCmd('hiliteColor','transparent')">清底色</button>
+  <button class="chip" onclick="tplLink()">連結</button>
+  <button class="chip" onclick="tplCmd('justifyLeft')">靠左</button><button class="chip" onclick="tplCmd('justifyCenter')">置中</button><button class="chip" onclick="tplCmd('justifyRight')">靠右</button>
+  <button class="chip" onclick="tplCmd('removeFormat')">清除格式</button></div>
+ <div id="tp_b" class="tpl-ed" contenteditable="true" oninput="tplSync()"></div>
+ <div class="sub" style="margin:12px 2px 6px">點一下插入欄位</div><div class="chips wrap" style="gap:6px">${TPL_VARS.map(v=>`<button class="chip" onmousedown="event.preventDefault()" onclick="tplIns('${v}')">${v}</button>`).join('')}</div>
+ <div class="sub" style="margin:14px 2px 6px">連結顯示文字（信件裡不顯示一長串網址）</div>
+ <label class="pf-f"><span>{回報連結} 顯示為</span><input value="${esc(d.lt.pay)}" oninput="TPD.lt.pay=this.value"></label>
+ <label class="pf-f"><span>{賣場連結} 顯示為</span><input value="${esc(d.lt.shop)}" oninput="TPD.lt.shop=this.value"></label>
+ <button class="btn o" style="width:100%;margin-top:16px" onclick="tplReset()">還原這封的預設內容</button>`}</div>`);
+ const ed=$('#tp_b');if(ed){ed.innerHTML=d.h;TPR=null}}
+function tplV(v){tplSync();TPD.v=v;tplR()}
+async function tplBack(){tplSync();const d=TPD;if((d.s!==d.s0||d.h!==d.h0||JSON.stringify(d.lt)!==d.l0)&&!await ask('有尚未儲存的修改，確定離開？','離開'))return;tplM(d.fm)}
+function tplSave(){tplSync();const d=TPD;S.pre.tpl[d.k]={s:d.s,b:tplH2T(d.h),h:d.h};S.pre.linkTxt={pay:String(d.lt.pay||'').trim()||'點此回報匯款',shop:String(d.lt.shop||'').trim()||'前往賣場'};S.pre.ts=Date.now();save();toast('已儲存');tplM(d.fm)}
+async function tplReset(){if(!await ask('確認還原成預設內容？','還原'))return;const df=DEF_TPL()[TPD.k];TPD.s=df.s;TPD.h=tplT2H(df.b);tplR()}
 
 function addTestOrders(){const p=S.products.find(x=>inEv(x)&&!x.off)||S.products[0];if(!p)return toast('請先新增商品');
  const mk=(mode,nick,k)=>{const id=Date.now()*1000+k,no=String(S.nid++).padStart(3,'0').slice(-3);
