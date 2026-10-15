@@ -475,7 +475,7 @@ const DEF_TPL=()=>({
  remind:{s:'【{店名}】匯款提醒 {訂單編號}',b:'{暱稱} 您好，\n\n提醒您，預購 {訂單編號} 還沒有收到匯款回報。\n金額：{總額}　期限：{期限}\n{匯款資訊}\n\n匯款後請至這裡回報：\n{回報連結}\n\n若已匯款，請直接回報即可，謝謝！'},
  store:{s:'【{店名}】賣場下單連結 {訂單編號}',b:'{暱稱} 您好，\n\n您的預購商品已準備好，請至賣場下單（貨到付款）：\n{賣場連結}\n\n商品內容：\n{商品清單}\n\n謝謝您的支持！'}
 });
-S.pre=Object.assign({auto:false,open:false,ev:null,pids:[],title:'',note:'',bank:'',days:3,shop:'',formUrl:'',api:'',sender:'',fromEmail:''},S.pre||{});
+S.pre=Object.assign({auto:false,open:false,ev:null,pids:[],title:'',note:'',bank:'',days:3,shop:'',formUrl:'',api:'',sender:''},S.pre||{});
 S.pre.tpl=Object.assign(DEF_TPL(),S.pre.tpl||{});
 const OLD_CONF_S='【{店名}】預購訂單確認 {訂單編號}',OLD_CONF_B='{暱稱} 您好，\n\n已收到您的預購，訂單內容如下：\n{商品清單}\n\n合計：{總額}\n取貨方式：{取貨方式}\n\n謝謝您的支持！';
 const tplMig=()=>{const c=S.pre.tpl.confirm;if(c&&c.s===OLD_CONF_S&&c.b===OLD_CONF_B)S.pre.tpl.confirm=DEF_TPL().confirm};tplMig();
@@ -797,9 +797,8 @@ function setSt(id,s){S.orders.find(o=>o.id==id).status=s;save();qou(id);closeM()
 function relStock(o){o.items.forEach(i=>{const p=P(i.pid);((p&&p.combo)||[{pid:i.pid,q:1}]).forEach(c=>{const x=P(c.pid);if(x&&x.evs&&x.evs[o.ev]!=null)x.evs[o.ev]+=i.qty*c.q})})}
 async function cancelPre(id){const o=S.orders.find(x=>x.id==id);if(!o||!await ask('確認取消這筆預購？商品庫存會退回。','取消預購'))return;relStock(o);o.status='已取消';o.cancelAt=Date.now();save();qou(id);closeM();r1();toast('已取消，庫存已退回')}
 async function mailJwt(){try{const r=await sb.auth.refreshSession();if(r&&r.data&&r.data.session)return r.data.session.access_token}catch(e){}const {data}=await sb.auth.getSession();return data.session&&data.session.access_token}
-const mailFrom=()=>({fromEmail:String(S.pre.fromEmail||'').trim(),sender:String(S.pre.sender||'').trim(),userEmail:USER&&USER.email||''});
 async function sendMail(id,kind){const o=S.orders.find(x=>x.id==id);if(!o)return;if(!o.email)return alertM('這筆訂單沒有 Email，無法寄信');if(!S.pre.api)return alertM('請先到「預購表單 → 右下角選單」填入後台網址');if(!sb||!USER)return alertM('請先登入');
-toast('寄送中…');try{const jwt=await mailJwt();const r=await fetch(S.pre.api,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'mail',jwt,orderId:o.id,kind,...mailFrom()})});const j=await r.json();if(!j.ok)throw new Error(j.err||'後台回應失敗');o.mails=o.mails||{};o.mails[kind]=Date.now();save();qou(id);toast('已寄出');detail(id)}catch(e){alertM('寄信失敗：'+errMsg(e))}}
+toast('寄送中…');try{const jwt=await mailJwt();const r=await fetch(S.pre.api,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'mail',jwt,orderId:o.id,kind})});const j=await r.json();if(!j.ok)throw new Error(j.err||'後台回應失敗');o.mails=o.mails||{};o.mails[kind]=Date.now();save();qou(id);toast('已寄出');detail(id)}catch(e){alertM('寄信失敗：'+errMsg(e))}}
 function pmSet(m){PMODE=m;document.querySelectorAll('#pmc .chip').forEach(c=>c.classList.toggle('on',c.dataset.m==m))}
 function preTog(){S.pre.auto=!S.pre.auto;S.pre.ts=Date.now();filter='all';sfilter='all';OCAT='all';save();r3()}
 /* ---- 預購表單編輯（和客人看到的表單長一樣，只是可以編輯） ---- */
@@ -837,7 +836,7 @@ const PF_IC={
 const fic=k=>`<svg class="ic fo" viewBox="0 0 24 24">${PF_IC[k]||''}</svg>`;
 const pfImgSt=b=>{const a=b.align||'center';return `width:${b.size||100}%;margin-left:${a=='left'?0:'auto'};margin-right:${a=='right'?0:'auto'}`};
 const pfv=k=>PRC?PRC[k]:S.pre[k];
-const pfSnap=()=>({pids:(S.pre.ev==null||S.pre.ev==S.cur)?[...S.pre.pids]:[],title:S.pre.title||'',note:S.pre.note||'',bank:S.pre.bank||'',days:S.pre.days||3,shop:S.pre.shop||'',api:S.pre.api||'',sender:S.pre.sender||'',fromEmail:S.pre.fromEmail||'',deadline:S.pre.deadline||'',blocks:JSON.parse(JSON.stringify(S.pre.blocks&&S.pre.blocks.length?S.pre.blocks:pfDefBlocks()))});
+const pfSnap=()=>({pids:(S.pre.ev==null||S.pre.ev==S.cur)?[...S.pre.pids]:[],title:S.pre.title||'',note:S.pre.note||'',bank:S.pre.bank||'',days:S.pre.days||3,shop:S.pre.shop||'',api:S.pre.api||'',sender:S.pre.sender||'',deadline:S.pre.deadline||'',blocks:JSON.parse(JSON.stringify(S.pre.blocks&&S.pre.blocks.length?S.pre.blocks:pfDefBlocks()))});
 const pfB=id=>PRC.blocks.find(b=>b.id==id);
 function pfSetB(id,k,v){const b=pfB(id);if(b)b[k]=v}
 function pfSetOpt(id,j,v){const b=pfB(id);if(b&&b.opts[j])b.opts[j]=typeof b.opts[j]=='object'?Object.assign(b.opts[j],{label:v}):v}
@@ -942,21 +941,20 @@ async function pfTestSend(){const em=($('#pt_e').value||'').trim();if(!/^\S+@\S+
  S.orders.unshift({id,ev:S.cur,no,time:id,items:[{pid:p.id,name:p.name,price:p.price,qty:1,gift:false,cost:ucost(p)}],disc:0,total:p.price,recv:0,type:'pre',status:'已填單',note:'測試',link:'',rw:[],cust:0,src:'form',mode:PTM,email:em,memo:'測試信',seen:true,test:1});lsave();qo(id);toast('寄送中…');
  try{for(let n=0;n<12;n++){await flush();if(!Q.some(q=>q.id==id))break;await new Promise(r=>setTimeout(r,400))}
   const jwt=await mailJwt(),kinds=PTM=='ship'?['copy','store']:['copy','confirm'],bad=[];let ok=0;
-  for(const kd of kinds){try{const r=await fetch(api,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'mail',jwt,orderId:id,kind:kd,...mailFrom()})}),j=await r.json();if(!j.ok)throw new Error(j.err||'後台回應失敗');ok++}catch(e){bad.push(TPL_INFO[kd][0]+'：'+errMsg(e))}}
+  for(const kd of kinds){try{const r=await fetch(api,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'mail',jwt,orderId:id,kind:kd})}),j=await r.json();if(!j.ok)throw new Error(j.err||'後台回應失敗');ok++}catch(e){bad.push(TPL_INFO[kd][0]+'：'+errMsg(e))}}
   if(bad.length)alertM('已寄出 '+ok+' 封；失敗：'+bad.join('；'));else toast('測試信已寄出（'+ok+' 封）')}
  catch(e){alertM('寄信失敗：'+errMsg(e))}
  finally{S.orders=S.orders.filter(x=>x.id!=id);lsave();qod(id);save()}}
 let MC=null;
-function mailEd(kind,fm){MC={bank:S.pre.bank||'',days:S.pre.days||3,shop:S.pre.shop||'',sender:S.pre.sender||'',fromEmail:S.pre.fromEmail||'',api:S.pre.api||''};const inf=kind=='info';ANI=1;TALL=1;openM(`<div class="sh row"><button class="p2" onclick="${inf?`tplM(${fm?1:0})`:'closeM()'}">取消</button><b style="font-size:17px">${inf?'匯款與賣場':'寄信設定'}</b><button class="p2" style="background:var(--ac);color:#fff" onclick="mailCfgOk('${kind}',${fm?1:0})">完成</button></div><div class="sbody"><div class="pf-card" style="padding:14px 16px">${inf?`
+function mailEd(kind,fm){MC={bank:S.pre.bank||'',days:S.pre.days||3,shop:S.pre.shop||'',sender:S.pre.sender||'',api:S.pre.api||''};const inf=kind=='info';ANI=1;TALL=1;openM(`<div class="sh row"><button class="p2" onclick="${inf?`tplM(${fm?1:0})`:'closeM()'}">取消</button><b style="font-size:17px">${inf?'匯款與賣場':'寄信設定'}</b><button class="p2" style="background:var(--ac);color:#fff" onclick="mailCfgOk('${kind}',${fm?1:0})">完成</button></div><div class="sbody"><div class="pf-card" style="padding:14px 16px">${inf?`
  <label class="pf-f"><span>匯款資訊（寄給場取的客人）</span><textarea rows="3" placeholder="銀行（代碼）／帳號／戶名" oninput="MC.bank=this.value">${esc(MC.bank)}</textarea></label>
  <label class="pf-f" style="margin:0"><span>賣場連結（好賣，通販用）</span><input placeholder="https://" autocapitalize="off" value="${esc(MC.shop)}" oninput="MC.shop=this.value"></label>`:`
  <label class="pf-f"><span>匯款期限（天）</span><input type="number" inputmode="numeric" placeholder="3" value="${esc(MC.days)}" oninput="MC.days=this.value"></label>
  <label class="pf-f"><span>寄件人名稱（預設用表單標題）</span><input value="${esc(MC.sender)}" oninput="MC.sender=this.value"></label>
- <label class="pf-f"><span>寄信信箱（Apps Script 帳號的 Gmail，與收銀機登入信箱不同時填寫）</span><input type="email" placeholder="例如 yourname@gmail.com" autocapitalize="off" value="${esc(MC.fromEmail)}" oninput="MC.fromEmail=this.value"></label>
  <label class="pf-f" style="margin:0"><span>後台網址（Apps Script 部署後的網址）</span><input placeholder="https://script.google.com/macros/s/…/exec" autocapitalize="off" value="${esc(MC.api)}" oninput="MC.api=this.value"></label>`}</div></div>`)}
 const mailCfgM=()=>mailEd('set'),mailInfoM=fm=>mailEd('info',fm);
 function mailCfgOk(kind,fm){const c=MC,inf=kind=='info',api=String(c.api||'').trim();if(!inf&&api&&!/^https:\/\/script\.google\.com\//.test(api))return toast('後台網址應該是 script.google.com 開頭');
- const v=inf?{bank:String(c.bank||'').trim(),shop:String(c.shop||'').trim()}:{days:Math.max(1,Math.round(+c.days)||3),sender:String(c.sender||'').trim(),fromEmail:String(c.fromEmail||'').trim(),api};
+ const v=inf?{bank:String(c.bank||'').trim(),shop:String(c.shop||'').trim()}:{days:Math.max(1,Math.round(+c.days)||3),sender:String(c.sender||'').trim(),api};
  Object.assign(S.pre,v,{ts:Date.now()});S.pre.formUrl=pfLink();if(PRC)Object.assign(PRC,v);save();toast('已儲存');inf?tplM(fm):closeM()}
 function pfDeadlineCheck(){const d=S.pre.deadline;if(!S.pre.open||!d)return;const x=new Date(d).getTime();if(!x||Date.now()<x)return;S.pre.open=false;S.pre.ts=Date.now();save();toast('已到截止填單時間，表單已自動關閉');if(PRC&&$('#pfe').classList.contains('on'))pfEdit(1);if(cur==3)r3()}
 setInterval(pfDeadlineCheck,15000);setTimeout(pfDeadlineCheck,1500);
@@ -1019,8 +1017,8 @@ function pvClose(){const d=$('#pvd');if(d)d.classList.remove('on');PVD=null}
 function pvZoom(){const p=P(PVD);if(!p)return;const im=pvImgs(p);let z=$('#pvz');if(!z){z=document.createElement('div');z.id='pvz';z.onclick=()=>z.classList.remove('on');document.body.appendChild(z)}
  z.innerHTML=`<img src="${esc(im[PVI])}" alt="">${im.length>1?`<button class="pvz-a l" onclick="event.stopPropagation();PVI=(PVI+${im.length-1})%${im.length};pvGo(PVI);pvZoom()">‹</button><button class="pvz-a r" onclick="event.stopPropagation();PVI=(PVI+1)%${im.length};pvGo(PVI);pvZoom()">›</button>`:''}<span class="pvz-x">×</span>`;z.classList.add('on')}
 function pfPreview(){PVQ={};PVP='onsite';PVC='';PVW=[];pvClose();TALL=1;ANI=1;openM(`<div class="sh row"><span style="width:56px"></span><b style="font-size:17px">預覽表單</b><button class="p2" onclick="closeM()">關閉</button></div><div class="sbody"><div class="pv"><div class="pv-t">${esc(PRC.title||'（尚未填寫標題）')}</div>${PRC.note?`<div class="pv-tx">${esc(PRC.note)}</div>`:''}${PRC.blocks.map(b=>`<div class="pv-b">${pvField(b)}</div>`).join('')}<div class="row" style="margin-top:18px"><button class="p2" onclick="pfTestM('pfPreview()')">寄送測試信</button><button class="pf-btn" disabled style="opacity:.4">送出預購</button></div><div class="cap" style="text-align:center">預覽模式，不會真的送出</div></div></div>`);pvProd()}
-function pfApply(){PRC.blocks.forEach(b=>{if(['select','radio','checkbox'].includes(b.type)&&!Array.isArray(b.opts))b.opts=['選項 1','選項 2'];if(b.id==null)b.id=uid()});PRC.days=Math.max(1,Math.round(+PRC.days)||3);['title','note','bank','shop','api','sender','fromEmail'].forEach(k=>PRC[k]=String(PRC[k]||'').trim());
- Object.assign(S.pre,{ts:Date.now(),ev:S.cur,pids:PRC.pids.filter(id=>{const p=P(id);return p&&inEv(p,S.cur)}),title:PRC.title,note:PRC.note,bank:PRC.bank,days:PRC.days,shop:PRC.shop,api:PRC.api,sender:PRC.sender,fromEmail:PRC.fromEmail,deadline:PRC.deadline||'',blocks:JSON.parse(JSON.stringify(PRC.blocks))});S.pre.formUrl=pfLink();PRC.pids=[...S.pre.pids];PRC0=JSON.stringify(PRC)}
+function pfApply(){PRC.blocks.forEach(b=>{if(['select','radio','checkbox'].includes(b.type)&&!Array.isArray(b.opts))b.opts=['選項 1','選項 2'];if(b.id==null)b.id=uid()});PRC.days=Math.max(1,Math.round(+PRC.days)||3);['title','note','bank','shop','api','sender'].forEach(k=>PRC[k]=String(PRC[k]||'').trim());
+ Object.assign(S.pre,{ts:Date.now(),ev:S.cur,pids:PRC.pids.filter(id=>{const p=P(id);return p&&inEv(p,S.cur)}),title:PRC.title,note:PRC.note,bank:PRC.bank,days:PRC.days,shop:PRC.shop,api:PRC.api,sender:PRC.sender,deadline:PRC.deadline||'',blocks:JSON.parse(JSON.stringify(PRC.blocks))});S.pre.formUrl=pfLink();PRC.pids=[...S.pre.pids];PRC0=JSON.stringify(PRC)}
 function pfSave(){if(PRC.api&&!/^https:\/\/script\.google\.com\//.test(PRC.api.trim()))return toast('後台網址應該是 script.google.com 開頭（在右下角選單裡）');pfApply();save();pfEdit(1);toast('已儲存')}
 function pfPublish(){const api=String(PRC.api||'').trim();if(!/^https:\/\/script\.google\.com\//.test(api))return toast('請先到右下角選單填後台網址（script.google.com 開頭）');if(!PRC.blocks.some(b=>b.type=='products'))return toast('請先用 ＋ 新增「商品選擇」');if(!PRC.pids.length)return toast('請至少選擇一項商品');if(PRC.deadline&&new Date(PRC.deadline).getTime()<=Date.now())return toast('截止填單時間已過，請到表單設定修改');if(!String(PRC.title||'').trim())return toast('請填表單標題');
  pfApply();S.pre.open=true;save();pfEdit(1);pfLinkM()}
