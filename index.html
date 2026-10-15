@@ -477,8 +477,7 @@ const DEF_TPL=()=>({
  remind:{s:'【{店名}】匯款提醒 {訂單編號}',b:'{暱稱} 您好，\n\n提醒您，預購 {訂單編號} 還沒有收到匯款回報。\n金額：{總額}　期限：{期限}\n{匯款資訊}\n\n匯款後請至這裡回報：\n{回報連結}\n\n若已匯款，請直接回報即可，謝謝！'},
  store:{s:'【{店名}】賣場下單連結 {訂單編號}',b:'{暱稱} 您好，\n\n您的預購商品已準備好，請至賣場下單（貨到付款）：\n{賣場連結}\n\n商品內容：\n{商品清單}\n\n謝謝您的支持！'}
 });
-try{(S.orders||[]).forEach(o=>{if(o&&o.type=='pre'&&o.mode=='ship'&&(o.status=='已填單'||o.status=='待下單'))o.status='準備中'})}catch(e){}
-S.pre=Object.assign({auto:false,open:false,ev:null,pids:[],title:'',note:'',bank:'',days:3,shop:'',formUrl:'',formBase:'',formClean:false,api:'',sender:''},S.pre||{});
+S.pre=Object.assign({auto:false,open:false,ev:null,pids:[],title:'',note:'',bank:'',days:3,shop:'',formUrl:'',formBase:'',formFull:false,api:'',sender:''},S.pre||{});
 S.pre.tpl=Object.assign(DEF_TPL(),S.pre.tpl||{});
 const OLD_CONF_S='【{店名}】預購訂單確認 {訂單編號}',OLD_CONF_B='{暱稱} 您好，\n\n已收到您的預購，訂單內容如下：\n{商品清單}\n\n合計：{總額}\n取貨方式：{取貨方式}\n\n謝謝您的支持！';
 const tplMig=()=>{const c=S.pre.tpl.confirm;if(c&&c.s===OLD_CONF_S&&c.b===OLD_CONF_B)S.pre.tpl.confirm=DEF_TPL().confirm};tplMig();
@@ -750,9 +749,9 @@ lsave();qo(oid);qpush({t:'sale_state',id:oid});qstate();cart={};gift={};GQ={};di
 const fmtD=t=>{const d=new Date(t);return d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()};
 const fmt=t=>{const d=new Date(t>1e14?t/1000:t);return d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
 let OEV=null,sfilter='all',PMODE='onsite',OCAT='all';
-const FLOW={onsite:['已填單','已回報','準備中','待取貨','已取貨'],ship:['準備中','待寄件','待取貨','已取貨']};
+const FLOW={onsite:['已填單','已回報','準備中','待取貨','已取貨'],ship:['已填單','待下單','準備中','待寄件','待取貨','已取貨']};
 const oMode=o=>o.mode=='ship'?'ship':'onsite';
-const FLOW0={onsite:['準備中','待取貨','已取貨'],ship:['準備中','待寄件','待取貨','已取貨']};
+const FLOW0={onsite:['準備中','待取貨','已取貨'],ship:['待下單','準備中','待寄件','待取貨','已取貨']};
 const oFlow=o=>(o.src=='form'||S.pre.auto||o.mode)?FLOW[oMode(o)]:FLOW0.onsite;
 const PCL={'已填單':'n','已回報':'q','準備中':'p','待下單':'n','待寄件':'q','待取貨':'q','已取消':'s'};
 const otm=o=>o.time>1e14?o.time/1000:o.time;
@@ -763,7 +762,7 @@ const pills=o=>{const a=[],rw=o.rw||[];a.push(o.type=='pre'?`<span class="pill $
 function r1(){const ev=OEV==null?S.cur:OEV,ck=`<span class="ck">${I.check}</span>`;
 const os=S.orders.filter(o=>ev=='all'||o.ev==ev),live=os.filter(o=>o.status!='已取消'),sales=live.reduce((a,o)=>a+o.total,0),cost=live.reduce((a,o)=>a+oc(o),0);
 const en=ev=='all'?'全部場次':((S.events.find(e=>e.id==ev)||{}).name||'');
-const A=S.pre.auto,fl=[['all','全部'],['sale','已完成'],['準備中','準備中'],['待取貨','待取貨'],['已取貨','已取貨']],CATS=[['all','全部訂單'],['sale','現場訂單'],['onsite','場取訂單'],['ship','通販訂單']],ALLST=['已填單','已回報','準備中','待寄件','待取貨','已取貨'],sfl=A&&OCAT!='sale'?[['all','全部'],...(OCAT=='all'?ALLST:FLOW[OCAT]).map(x=>[x,x]),['已取消','已取消']]:null,unp=A?os.filter(o=>o.type=='pre'&&o.src=='form'&&oMode(o)=='onsite'&&o.status=='已填單'):[],odc=unp.filter(ovd).length;
+const A=S.pre.auto,fl=[['all','全部'],['sale','已完成'],['準備中','準備中'],['待取貨','待取貨'],['已取貨','已取貨']],CATS=[['all','全部訂單'],['sale','現場訂單'],['onsite','場取訂單'],['ship','通販訂單']],ALLST=['已填單','已回報','準備中','待下單','待寄件','待取貨','已取貨'],sfl=A&&OCAT!='sale'?[['all','全部'],...(OCAT=='all'?ALLST:FLOW[OCAT]).map(x=>[x,x]),['已取消','已取消']]:null,unp=A?os.filter(o=>o.type=='pre'&&o.src=='form'&&oMode(o)=='onsite'&&o.status=='已填單'):[],odc=unp.filter(ovd).length;
 const vis=A?os.filter(o=>OCAT=='all'?(sfilter=='all'||(o.type=='pre'&&o.status==sfilter)):OCAT=='sale'?o.type=='sale':(o.type=='pre'&&oMode(o)==OCAT&&(sfilter=='all'||o.status==sfilter))):os.filter(o=>filter=='all'||(filter=='sale'?o.type=='sale':o.type=='pre'&&o.status==filter));
 const tdrop=A?`<div style="position:relative;flex:1"><button class="evb" style="font-size:20px;font-weight:700;background:none;padding:0;height:auto;max-width:none" onclick="event.stopPropagation();$('#oc').classList.toggle('on')"><span>${(CATS.find(c=>c[0]==OCAT)||CATS[0])[1]}</span>${I.tri}</button><div id="oc" class="dm" style="left:0;right:auto;top:34px" onclick="event.stopPropagation()"><div class="cap0">訂單類型</div>${CATS.map(c=>`<div class="mi" onclick="OCAT='${c[0]}';sfilter='all';r1()"><span>${c[1]}</span>${OCAT==c[0]?ck:''}</div>`).join('')}</div></div>`:'<h1 style="text-align:left;flex:1">訂單</h1>';
 $('#p1').innerHTML=`<div class="stkh"><div class="ph">${tdrop}<div style="position:relative"><button class="evb" onclick="event.stopPropagation();$('#om').classList.toggle('on')"><span>${esc(ev=='all'?'全部':en)}</span>${I.tri}</button><div id="om" class="dm" onclick="event.stopPropagation()"><div class="cap0">檢視場次</div><div class="mi" onclick="OEV='all';r1()"><span>全部</span>${ev=='all'?ck:''}</div>${S.events.map(e=>`<div class="mi" onclick="OEV=${e.id};r1()"><span>${esc(e.name)}</span>${ev==e.id?ck:''}</div>`).join('')}</div></div></div>
@@ -780,7 +779,7 @@ el.addEventListener('click',e=>{if(moved){e.stopPropagation();e.preventDefault()
 function delO(id){S.orders=S.orders.filter(o=>o.id!=id);save();qod(id);r1();toast('已刪除（庫存不會還原）')}
 function detail(id){const o=S.orders.find(x=>x.id==id);if(!o)return;if(o.seen===false){o.seen=true;lsave();qou(id);const el=document.querySelector('.sw[data-id="'+id+'"] .in');if(el)el.classList.remove('nw')}
 const pre=o.type=='pre',A=S.pre.auto,form=o.src=='form',fw=pre?oFlow(o):[],ix=fw.indexOf(o.status),nxt=ix>=0?fw[ix+1]:null,prv=ix>0?fw[ix-1]:null,rv=rcv(o),ship=oMode(o)=='ship',unpaid=form&&(ship?o.status!='已取貨':(o.status=='已填單'||o.status=='已回報')),cxl=o.status=='已取消';
-const mb=pre&&(form||A)&&!cxl?(!ship&&o.status=='已填單'?['remind','寄匯款提醒信']:ship&&o.status=='準備中'?['store','寄賣場連結信']:null):null;
+const mb=pre&&(form||A)&&!cxl?(!ship&&o.status=='已填單'?['remind','寄匯款提醒信']:ship&&(o.status=='已填單'||o.status=='待下單')?['store','寄賣場連結信']:null):null;
 const pay=o.pay?`<div class="grp" style="padding:2px 16px;margin-top:10px"><div class="li"><b>匯款回報</b><span class="sub" style="margin:0">${fmt(o.pay.at)}</span></div><div class="li"><span class="sub" style="margin:0">後五碼</span><span>${esc(o.pay.last5||'—')}</span></div><div class="li"><span class="sub" style="margin:0">金額</span><span>$${esc(o.pay.amount||'—')}</span></div><div class="li"><span class="sub" style="margin:0">匯款日期</span><span>${esc(o.pay.date||'—')}</span></div>${o.pay.memo?`<div class="li"><span class="sub" style="margin:0">備註</span><span>${esc(o.pay.memo)}</span></div>`:''}</div>`:'';
 const stRow=pre&&!cxl&&fw.length&&(nxt||prv)?`<div class="row" style="gap:10px;margin-top:4px">${prv?`<button class="btn o" style="flex:1" onclick="setSt(${o.id},'${prv}')">返回「${prv}」</button>`:''}${nxt?`<button class="btn" style="flex:1" onclick="setSt(${o.id},'${nxt}')">更新為「${nxt}」</button>`:''}</div>`:'';
 openM(`<div class="row" style="gap:10px;align-items:center;margin-bottom:2px"><h3 style="margin:0;min-width:0">#${o.no}　${pre?o.status:'已完成'}</h3>${mb?`<button class="p2 sm" style="flex:none" onclick="sendMail(${o.id},'${mb[0]}')">${mb[1]}</button>`:''}</div><div class="sub row" style="gap:10px"><span>${fmt(o.time)}${mb&&o.mails&&o.mails[mb[0]]?'　上次寄信 '+fmt(o.mails[mb[0]]):''}</span>${pre&&!ship&&o.status=='已回報'?`<span style="flex:none">匯款期限 ${fmtD(otm(o)+(+S.pre.days||3)*864e5)}</span>`:''}</div>
@@ -808,7 +807,7 @@ function preTog(){S.pre.auto=!S.pre.auto;S.pre.ts=Date.now();filter='all';sfilte
 let PRC=null,PRC0='',PFT=0,TPD=null,PVQ={},PVP='onsite';
 const pfNormBase=u=>{u=String(u||'').trim();if(!u)return '';if(!/^https?:\/\//i.test(u))u='https://'+u;try{const x=new URL(u);let p=x.pathname;if(!/\.html?$/i.test(p)&&!p.endsWith('/'))p+='/';return x.origin+p}catch(e){return ''}};
 const pfBase=()=>{const c=pfNormBase((typeof PRC!=='undefined'&&PRC&&PRC.formBase!=null)?PRC.formBase:S.pre.formBase);return c||location.origin+location.pathname.replace(/[^/]*$/,'')+'preorder.html'};
-const pfClean=()=>!!((typeof PRC!=='undefined'&&PRC&&PRC.formClean!=null)?PRC.formClean:S.pre.formClean)&&!!pfNormBase((typeof PRC!=='undefined'&&PRC&&PRC.formBase!=null)?PRC.formBase:S.pre.formBase);
+const pfClean=()=>!((typeof PRC!=='undefined'&&PRC&&PRC.formFull!=null)?PRC.formFull:S.pre.formFull)&&!!pfNormBase((typeof PRC!=='undefined'&&PRC&&PRC.formBase!=null)?PRC.formBase:S.pre.formBase);
 const pfLink=()=>(PRC&&PRC.api||S.pre.api)?pfBase()+(pfClean()?'':'?a='+btoa(String((PRC&&PRC.api)||S.pre.api)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')):'';
 const uid=()=>'b'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 const pfDefBlocks=()=>[
@@ -841,7 +840,7 @@ const PF_IC={
 const fic=k=>`<svg class="ic fo" viewBox="0 0 24 24">${PF_IC[k]||''}</svg>`;
 const pfImgSt=b=>{const a=b.align||'center';return `width:${b.size||100}%;margin-left:${a=='left'?0:'auto'};margin-right:${a=='right'?0:'auto'}`};
 const pfv=k=>PRC?PRC[k]:S.pre[k];
-const pfSnap=()=>({pids:(S.pre.ev==null||S.pre.ev==S.cur)?[...S.pre.pids]:[],title:S.pre.title||'',note:S.pre.note||'',bank:S.pre.bank||'',days:S.pre.days||3,shop:S.pre.shop||'',formBase:S.pre.formBase||'',formClean:!!S.pre.formClean,api:S.pre.api||'',sender:S.pre.sender||'',deadline:S.pre.deadline||'',blocks:JSON.parse(JSON.stringify(S.pre.blocks&&S.pre.blocks.length?S.pre.blocks:pfDefBlocks()))});
+const pfSnap=()=>({pids:(S.pre.ev==null||S.pre.ev==S.cur)?[...S.pre.pids]:[],title:S.pre.title||'',note:S.pre.note||'',bank:S.pre.bank||'',days:S.pre.days||3,shop:S.pre.shop||'',formBase:S.pre.formBase||'',formFull:!!S.pre.formFull,api:S.pre.api||'',sender:S.pre.sender||'',deadline:S.pre.deadline||'',blocks:JSON.parse(JSON.stringify(S.pre.blocks&&S.pre.blocks.length?S.pre.blocks:pfDefBlocks()))});
 const pfB=id=>PRC.blocks.find(b=>b.id==id);
 function pfSetB(id,k,v){const b=pfB(id);if(b)b[k]=v}
 function pfSetOpt(id,j,v){const b=pfB(id);if(b&&b.opts[j])b.opts[j]=typeof b.opts[j]=='object'?Object.assign(b.opts[j],{label:v}):v}
@@ -887,7 +886,7 @@ function pfEdit(keep){const o=$('#pfe');if(!keep){PRC=pfSnap();PRC0=JSON.stringi
  ${S.pre.open?`<button class="btn o" style="width:100%;margin-top:18px;color:var(--red)" onclick="pfStop()">停止發布（表單會顯示尚未開放）</button>`:''}
  </div></div>
  <div class="pf-fab"><button class="pf-fb" onclick="pfMenu()" aria-label="表單設定">${I.menu}</button><button class="pf-fb pl" onclick="pfAddM()" aria-label="新增元件">${I.plus}</button></div>
- <div class="pf-bar"><div class="pf-in"><div class="pf-tot">${S.pre.open?'已發布，儲存後立即生效':'尚未發布'}</div><button class="p2" onclick="pfSave()">儲存</button><button class="pf-btn" onclick="pfPublish()">${S.pre.open?'取得連結':'發布表單'}</button></div></div>`;
+ <div class="pf-bar"><div class="pf-in">${S.pre.open?'<button class="pf-tot" style="border:0;background:none;text-align:left;padding:0;font:inherit;color:inherit;cursor:pointer" onclick="pfPause()">已發布 · 點此暫停發布<br><small style="opacity:.6">儲存後立即生效</small></button>':'<div class="pf-tot">尚未發布</div>'}<button class="p2" onclick="pfSave()">儲存</button><button class="pf-btn" onclick="pfPublish()">${S.pre.open?'取得連結':'發布表單'}</button></div></div>`;
  o.classList.add('on');o.querySelector('.pf-body').scrollTop=top;pfSwipe()}
 function pfSwipe(){document.querySelectorAll('#pfl .sw').forEach(el=>{let x0=null,y0=0,moved=false,was=false;
  el.addEventListener('pointerdown',e=>{if(e.target.closest('.pf-hd,button')){x0=null;moved=false;return}x0=e.clientX;y0=e.clientY;moved=false;was=el.classList.contains('open')});
@@ -936,7 +935,7 @@ toast('剪貼簿裡沒有圖片')}
 /* 選單：模板區域＋送出信件設定 */
 function pfMenu(){ANI=1;TALL=1;openM(`<div class="sh row"><span style="width:56px"></span><b style="font-size:17px">表單設定</b><button class="p2" onclick="closeM()">完成</button></div><div class="sbody">
  <div class="pf-sec" style="margin-top:4px">截止填單時間</div><div class="pf-card" style="padding:14px 16px"><label class="pf-f" style="margin:0"><span>到時間後自動關閉表單（留空＝不設定）</span><input type="datetime-local" value="${esc(PRC.deadline||'')}" oninput="PRC.deadline=this.value"></label></div>
- <div class="pf-sec">預購表單網址</div><div class="pf-card" style="padding:14px 16px"><label class="pf-f" style="margin:0"><span>表單頁面網址（例如 Netlify 網址；留空＝用目前網站）</span><input id="pf_fb" placeholder="https://你的網站.netlify.app/" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(PRC.formBase||'')}" oninput="PRC.formBase=this.value;pfFbShow()" onchange="if(pfNormBase(this.value)){PRC.formBase=pfNormBase(this.value);this.value=PRC.formBase;pfFbShow()}"></label><div class="cap" id="pf_fbv" style="word-break:break-all;margin-top:8px"></div><div class="li" style="padding:12px 0 0;margin-top:10px;border-top:1px solid var(--line,#eee)"><span class="rw">乾淨網址（不帶 ?a=…）</span>${tgl(PRC.formClean,'PRC.formClean=!PRC.formClean;pfMenu()')}</div><div class="cap">開啟前，請先把後台網址寫進預購頁檔案裡的 DEFAULT_API，否則客人會看到「連結不完整」。需要先填上面的表單頁面網址。</div></div>
+ <div class="pf-sec">預購表單網址</div><div class="pf-card" style="padding:14px 16px"><label class="pf-f" style="margin:0"><span>表單頁面網址（例如 Netlify 網址；留空＝用目前網站）</span><input id="pf_fb" placeholder="https://你的網站.netlify.app/" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(PRC.formBase||'')}" oninput="PRC.formBase=this.value;pfFbShow()" onchange="if(pfNormBase(this.value)){PRC.formBase=pfNormBase(this.value);this.value=PRC.formBase;pfFbShow()}"></label><div class="cap" id="pf_fbv" style="word-break:break-all;margin-top:8px"></div><div class="li" style="padding:12px 0 0;margin-top:10px;border-top:1px solid var(--line,#eee)"><span class="rw">連結附上後台參數 ?a=…</span>${tgl(PRC.formFull,'PRC.formFull=!PRC.formFull;pfMenu()')}</div><div class="cap">預設關閉＝乾淨連結。前提：預購頁檔案裡的 DEFAULT_API 已填好後台網址；如果還沒填，請先打開這個開關。</div></div>
  <div class="pf-sec">信件</div><div class="grp"><div class="li" onclick="tplM(1)"><span class="rw"><i class="bk">${I.book}</i>信件模板</span>${I.chev}</div><div class="li" onclick="pfTestM()"><span class="rw"><i class="bk">${I.book}</i>寄送測試信</span>${I.chev}</div></div>
  <div class="cap">修改後記得回到編輯頁按「儲存」。</div></div>`);pfFbShow()}
 let PTM='onsite';
@@ -946,7 +945,7 @@ function pfTestMode(m){PTM=m;document.querySelectorAll('#ptc .chip').forEach(c=>
 async function pfTestSend(){const em=($('#pt_e').value||'').trim();if(!/^\S+@\S+\.\S+$/.test(em))return toast('請輸入正確的信箱');const api=String(S.pre.api||(PRC&&PRC.api)||'').trim();if(!/^https:\/\/script\.google\.com\//.test(api))return toast('請先到設定頁的寄信設定填後台網址');if(!sb||!USER)return toast('請先登入');
  const p=(PRC&&PRC.pids.map(id=>P(id)).find(x=>x&&!x.off))||S.products.find(x=>inEv(x)&&!x.off)||S.products[0];if(!p)return toast('請先新增商品');
  S.pre.testMail=em;const id=Date.now()*1000+Math.floor(Math.random()*1000),no=String(S.nid++).padStart(3,'0').slice(-3),kind=PTM=='ship'?'store':'remind';
- S.orders.unshift({id,ev:S.cur,no,time:id,items:[{pid:p.id,name:p.name,price:p.price,qty:1,gift:false,cost:ucost(p)}],disc:0,total:p.price,recv:0,type:'pre',status:PTM=='ship'?'準備中':'已填單',note:'測試',link:'',rw:[],cust:0,src:'form',mode:PTM,email:em,memo:'測試信',seen:true,test:1});lsave();qo(id);toast('寄送中…');
+ S.orders.unshift({id,ev:S.cur,no,time:id,items:[{pid:p.id,name:p.name,price:p.price,qty:1,gift:false,cost:ucost(p)}],disc:0,total:p.price,recv:0,type:'pre',status:'已填單',note:'測試',link:'',rw:[],cust:0,src:'form',mode:PTM,email:em,memo:'測試信',seen:true,test:1});lsave();qo(id);toast('寄送中…');
  try{for(let n=0;n<12;n++){await flush();if(!Q.some(q=>q.id==id))break;await new Promise(r=>setTimeout(r,400))}
   const jwt=await mailJwt(),kinds=PTM=='ship'?['copy','store']:['copy','confirm'],bad=[];let ok=0;
   for(const kd of kinds){try{const r=await fetch(api,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'mail',jwt,orderId:id,kind:kd,formUrl:pfLink(),formBase:pfBase()})}),j=await r.json();if(!j.ok)throw new Error(j.err||'後台回應失敗');ok++}catch(e){bad.push(TPL_INFO[kd][0]+'：'+errMsg(e))}}
@@ -1033,8 +1032,9 @@ function pvZoom(){const p=P(PVD);if(!p)return;const im=pvImgs(p);let z=$('#pvz')
  z.innerHTML=`<img src="${esc(im[PVI])}" alt="">${im.length>1?`<button class="pvz-a l" onclick="event.stopPropagation();PVI=(PVI+${im.length-1})%${im.length};pvGo(PVI);pvZoom()">‹</button><button class="pvz-a r" onclick="event.stopPropagation();PVI=(PVI+1)%${im.length};pvGo(PVI);pvZoom()">›</button>`:''}<span class="pvz-x">×</span>`;z.classList.add('on')}
 function pfPreview(){PVQ={};PVP='onsite';PVC='';PVW=[];pvClose();TALL=1;ANI=1;openM(`<div class="sh row"><span style="width:56px"></span><b style="font-size:17px">預覽表單</b><button class="p2" onclick="closeM()">關閉</button></div><div class="sbody"><div class="pv"><div class="pv-t">${esc(PRC.title||'（尚未填寫標題）')}</div>${PRC.note?`<div class="pv-tx">${esc(PRC.note)}</div>`:''}${PRC.blocks.map(b=>`<div class="pv-b">${pvField(b)}</div>`).join('')}<div class="row" style="margin-top:18px"><button class="p2" onclick="pfTestM('pfPreview()')">寄送測試信</button><button class="pf-btn" disabled style="opacity:.4">送出預購</button></div><div class="cap" style="text-align:center">預覽模式，不會真的送出</div></div></div>`);pvProd()}
 function pfApply(){PRC.blocks.forEach(b=>{if(['select','radio','checkbox'].includes(b.type)&&!Array.isArray(b.opts))b.opts=['選項 1','選項 2'];if(b.id==null)b.id=uid()});PRC.days=Math.max(1,Math.round(+PRC.days)||3);['title','note','bank','shop','api','sender'].forEach(k=>PRC[k]=String(PRC[k]||'').trim());
- Object.assign(S.pre,{ts:Date.now(),ev:S.cur,pids:PRC.pids.filter(id=>{const p=P(id);return p&&inEv(p,S.cur)}),title:PRC.title,note:PRC.note,bank:PRC.bank,days:PRC.days,shop:PRC.shop,formBase:pfNormBase(PRC.formBase),formClean:!!PRC.formClean,api:PRC.api,sender:PRC.sender,deadline:PRC.deadline||'',blocks:JSON.parse(JSON.stringify(PRC.blocks))});S.pre.formUrl=pfLink();PRC.pids=[...S.pre.pids];PRC0=JSON.stringify(PRC)}
+ Object.assign(S.pre,{ts:Date.now(),ev:S.cur,pids:PRC.pids.filter(id=>{const p=P(id);return p&&inEv(p,S.cur)}),title:PRC.title,note:PRC.note,bank:PRC.bank,days:PRC.days,shop:PRC.shop,formBase:pfNormBase(PRC.formBase),formFull:!!PRC.formFull,api:PRC.api,sender:PRC.sender,deadline:PRC.deadline||'',blocks:JSON.parse(JSON.stringify(PRC.blocks))});S.pre.formUrl=pfLink();PRC.pids=[...S.pre.pids];PRC0=JSON.stringify(PRC)}
 function pfSave(){if(PRC.api&&!/^https:\/\/script\.google\.com\//.test(PRC.api.trim()))return toast('後台網址應該是 script.google.com 開頭（在右下角選單裡）');pfApply();save();pfEdit(1);toast('已儲存')}
+async function pfPause(){if(!await ask('暫停後客人將無法填單，確定暫停發布？','暫停發布'))return;S.pre.open=false;S.pre.ts=Date.now();save();pfEdit(1);toast('已暫停發布')}
 function pfPublish(){const api=String(PRC.api||'').trim();if(!/^https:\/\/script\.google\.com\//.test(api))return toast('請先到右下角選單填後台網址（script.google.com 開頭）');if(!PRC.blocks.some(b=>b.type=='products'))return toast('請先用 ＋ 新增「商品選擇」');if(!PRC.pids.length)return toast('請至少選擇一項商品');if(PRC.deadline&&new Date(PRC.deadline).getTime()<=Date.now())return toast('截止填單時間已過，請到表單設定修改');if(!String(PRC.title||'').trim())return toast('請填表單標題');
  pfApply();S.pre.open=true;save();pfEdit(1);pfLinkM()}
 function pfLinkM(){const l=pfLink()||S.pre.formUrl;openM(`<h3>表單已發布</h3><div class="sub" style="margin:-4px 0 10px">把這個連結貼給客人就可以了。</div><div class="rm" style="word-break:break-all;user-select:all;margin-bottom:12px">${esc(l)}</div><div class="row" style="gap:10px"><button class="btn o" style="flex:1" onclick="friendCopyText('${esc(l)}')">複製連結</button><a class="btn" style="flex:1;text-align:center;text-decoration:none" href="${esc(l)}" target="_blank" rel="noopener">開啟表單</a></div>`)}
@@ -1091,7 +1091,7 @@ async function tplReset(){if(!await ask('確認還原成預設內容？','還原
 function addTestOrders(){const p=S.products.find(x=>inEv(x)&&!x.off)||S.products[0];if(!p)return toast('請先新增商品');
  const mk=(mode,nick,k)=>{const id=Date.now()*1000+k,no=String(S.nid++).padStart(3,'0').slice(-3);
   ((p.combo||[{pid:p.id,q:1}])).forEach(c=>{const x=P(c.pid);if(x&&sk(x)!=null)x.evs[S.cur]=Math.max(0,sk(x)-c.q)});
-  S.orders.unshift({id,ev:S.cur,no,time:id,items:[{pid:p.id,name:p.name,price:p.price,qty:1,gift:false,cost:ucost(p)}],disc:0,total:p.price,recv:0,type:'pre',status:mode=='ship'?'準備中':'已填單',note:nick,link:'',rw:[],cust:0,src:'form',mode,email:'test@example.com',memo:'測試訂單',seen:false});qo(id)};
+  S.orders.unshift({id,ev:S.cur,no,time:id,items:[{pid:p.id,name:p.name,price:p.price,qty:1,gift:false,cost:ucost(p)}],disc:0,total:p.price,recv:0,type:'pre',status:'已填單',note:nick,link:'',rw:[],cust:0,src:'form',mode,email:'test@example.com',memo:'測試訂單',seen:false});qo(id)};
  mk('onsite','測試・場取',1);mk('ship','測試・通販',2);S.pre.auto=true;save();render();toast('已新增 2 筆測試訂單（到訂單頁查看）')}
 let PQ='',PG='list',PGF='',CG='';
 const fmt2=n=>String(Math.round(Number(n)));
