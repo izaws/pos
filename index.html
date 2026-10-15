@@ -480,8 +480,7 @@ const DEF_TPL=()=>({
 S.pre=Object.assign({auto:false,open:false,ev:null,pids:[],title:'',note:'',bank:'',days:3,shop:'',formUrl:'',formBase:'',formFull:false,api:'',sender:''},S.pre||{});
 S.pre.tpl=Object.assign(DEF_TPL(),S.pre.tpl||{});
 const OLD_CONF_S='【{店名}】預購訂單確認 {訂單編號}',OLD_CONF_B='{暱稱} 您好，\n\n已收到您的預購，訂單內容如下：\n{商品清單}\n\n合計：{總額}\n取貨方式：{取貨方式}\n\n謝謝您的支持！';
-const tplMig=()=>{const c=S.pre.tpl.confirm;if(c&&c.s===OLD_CONF_S&&c.b===OLD_CONF_B)S.pre.tpl.confirm=DEF_TPL().confirm};tplMig();
-if(S.pre.tplV!==3){S.pre.tpl=DEF_TPL();S.pre.tplV=3}
+const tplMig=()=>{const c=S.pre.tpl.confirm;if(c&&c.s===OLD_CONF_S&&c.b===OLD_CONF_B)S.pre.tpl.confirm=DEF_TPL().confirm;if(S.pre.tplV!==3){S.pre.tpl=DEF_TPL();S.pre.tplV=3}};tplMig();
 const migOrders=()=>S.orders.forEach(o=>{if(o.type=='pre'&&o.status=='已完成')o.status='已取貨'});migOrders();
 const migProds=()=>S.products.forEach(p=>{if(!p.evs){p.evs={};S.events.forEach(e=>{p.evs[e.id]=p.stock==null?null:p.stock})}delete p.stock});migProds();
 S.set=Object.assign({color:'',lang:'zh'},S.set);if(S.set.color=='#E0B85A')S.set.color='';
@@ -781,7 +780,7 @@ function delO(id){S.orders=S.orders.filter(o=>o.id!=id);save();qod(id);r1();toas
 function detail(id){const o=S.orders.find(x=>x.id==id);if(!o)return;if(o.seen===false){o.seen=true;lsave();qou(id);const el=document.querySelector('.sw[data-id="'+id+'"] .in');if(el)el.classList.remove('nw')}
 const pre=o.type=='pre',A=S.pre.auto,form=o.src=='form',fw=pre?oFlow(o):[],ix=fw.indexOf(o.status),nxt=ix>=0?fw[ix+1]:null,prv=ix>0?fw[ix-1]:null,rv=rcv(o),ship=oMode(o)=='ship',unpaid=form&&(ship?o.status!='已取貨':(o.status=='已填單'||o.status=='已回報')),cxl=o.status=='已取消';
 const mb=pre&&(form||A)&&!cxl?(!ship&&o.status=='已填單'?['remind','寄匯款提醒信']:ship&&(o.status=='已填單'||o.status=='待下單')?['store','寄賣場連結信']:null):null;
-const pay=o.pay?`<div class="grp" style="padding:2px 16px;margin-top:10px"><div class="li"><b>匯款回報</b><span class="sub" style="margin:0">${fmt(o.pay.at)}</span></div><div class="li"><span class="sub" style="margin:0">後五碼</span><span>${esc(o.pay.last5||'—')}</span></div><div class="li"><span class="sub" style="margin:0">金額</span><span>$${esc(o.pay.amount||'—')}</span></div><div class="li"><span class="sub" style="margin:0">匯款日期</span><span>${esc(o.pay.date||'—')}</span></div>${o.pay.memo?`<div class="li"><span class="sub" style="margin:0">備註</span><span>${esc(o.pay.memo)}</span></div>`:''}</div>`:'';
+const pay=o.pay?`<div class="grp" style="padding:2px 16px;margin-top:10px"><div class="li"><b>匯款回報</b><span class="sub" style="margin:0">${fmt(o.pay.at)}</span></div><div class="li"><span class="sub" style="margin:0">後五碼</span><span>${esc(o.pay.last5||'—')}</span></div><div class="li"><span class="sub" style="margin:0">金額</span><span>$${esc(o.pay.amount||'—')}</span></div><div class="li"><span class="sub" style="margin:0">匯款日期</span><span>${esc(o.pay.date||'—')}</span></div>${o.pay.memo?`<div class="li"><span class="sub" style="margin:0">備註</span><span>${esc(o.pay.memo)}</span></div>`:''}${(o.pay.extra||[]).map(x=>`<div class="li"><span class="sub" style="margin:0">${esc(x.label)}</span><span>${esc(x.value)}</span></div>`).join('')}</div>`:'';
 const stRow=pre&&!cxl&&fw.length&&(nxt||prv)?`<div class="row" style="gap:10px;margin-top:4px">${prv?`<button class="btn o" style="flex:1" onclick="setSt(${o.id},'${prv}')">返回「${prv}」</button>`:''}${nxt?`<button class="btn" style="flex:1" onclick="setSt(${o.id},'${nxt}')">更新為「${nxt}」</button>`:''}</div>`:'';
 openM(`<div class="row" style="gap:10px;align-items:center;margin-bottom:2px"><h3 style="margin:0;min-width:0">#${o.no}　${pre?o.status:'已完成'}</h3>${mb?`<button class="p2 sm" style="flex:none" onclick="sendMail(${o.id},'${mb[0]}')">${mb[1]}</button>`:''}</div><div class="sub row" style="gap:10px"><span>${fmt(o.time)}${mb&&o.mails&&o.mails[mb[0]]?'　上次寄信 '+fmt(o.mails[mb[0]]):''}</span>${pre&&!ship&&o.status=='已回報'?`<span style="flex:none">匯款期限 ${fmtD(otm(o)+(+S.pre.days||3)*864e5)}</span>`:''}</div>
 ${pre?`<div class="grp" style="padding:2px 16px;margin-top:10px"><div class="li"><span class="sub" style="margin:0">暱稱</span><span>${esc(o.note||'—')}</span></div><div class="li"><span class="sub" style="margin:0">社群</span>${linkH(o.link)}</div>${A||form?`<div class="li"><span class="sub" style="margin:0">取貨方式</span><span>${ship?'通販':'現場'}</span></div>`:''}${o.email?`<div class="li"><span class="sub" style="margin:0">Email</span><span style="font-size:14px;word-break:break-all">${esc(o.email)}</span></div>`:''}${o.memo?`<div class="li"><span class="sub" style="margin:0">備註</span><span style="font-size:14px">${esc(o.memo)}</span></div>`:''}${(o.ans||[]).map(a=>`<div class="li"><span class="sub" style="margin:0;flex:none;margin-right:12px">${esc(a.l)}</span><span style="font-size:14px;text-align:right;word-break:break-all">${esc(a.v)}</span></div>`).join('')}</div>${pay}`:''}
@@ -810,6 +809,11 @@ const pfNormBase=u=>{u=String(u||'').trim();if(!u)return '';if(!/^https?:\/\//i.
 const pfBase=()=>{const c=pfNormBase((typeof PRC!=='undefined'&&PRC&&PRC.formBase!=null)?PRC.formBase:S.pre.formBase);return c||location.origin+location.pathname.replace(/[^/]*$/,'')+'preorder.html'};
 const pfClean=()=>!((typeof PRC!=='undefined'&&PRC&&PRC.formFull!=null)?PRC.formFull:S.pre.formFull)&&!!pfNormBase((typeof PRC!=='undefined'&&PRC&&PRC.formBase!=null)?PRC.formBase:S.pre.formBase);
 const pfLink=()=>(PRC&&PRC.api||S.pre.api)?pfBase()+(pfClean()?'':'?a='+btoa(String((PRC&&PRC.api)||S.pre.api)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')):'';
+let PFPAY=0;
+const pfBl=()=>PFPAY?PRC.payBlocks:PRC.blocks;
+const pfSetBl=a=>{if(PFPAY)PRC.payBlocks=a;else PRC.blocks=a};
+const PF_ONE=['products','pickup','ordersum','bankinfo','last5'];
+const pfDefPay=()=>[{id:'p_sum',type:'ordersum',label:'訂單明細'},{id:'p_bank',type:'bankinfo',label:'匯款資訊'},{id:'p_l5',type:'last5',label:'匯款帳號後五碼',ph:'例如 12345',req:1}];
 const uid=()=>'b'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 const pfDefBlocks=()=>[
  {id:'products',type:'products',label:'選擇商品'},
@@ -818,8 +822,9 @@ const pfDefBlocks=()=>[
  {id:'social',type:'url',key:'social',label:'社群網址',req:1},
  {id:'email',type:'email',key:'email',label:'Email',req:1},
  {id:'memo',type:'textarea',key:'memo',label:'備註'}];
-const PF_N={text:'單行文字',textarea:'多行文字',email:'電子郵件',url:'網址 / 社群連結',tel:'電話號碼',number:'數字',date:'日期',time:'時間',select:'下拉選單',radio:'單選題',checkbox:'複選題',agree:'同意條款',heading:'標題與內文',note:'純文字說明',divider:'分隔線',image:'圖片',section:'區塊標題',products:'商品選擇',pickup:'單選題（領取方式）'};
+const PF_N={text:'單行文字',textarea:'多行文字',email:'電子郵件',url:'網址 / 社群連結',tel:'電話號碼',number:'數字',date:'日期',time:'時間',select:'下拉選單',radio:'單選題',checkbox:'複選題',agree:'同意條款',heading:'標題與內文',note:'純文字說明',divider:'分隔線',image:'圖片',section:'區塊標題',products:'商品選擇',pickup:'單選題（領取方式）',ordersum:'訂單明細',bankinfo:'匯款資訊',last5:'匯款帳號後五碼'};
 const PF_GROUPS=[['預購專用',['products','pickup']],['輸入欄位',['text','textarea','email','url','tel','number','date']],['選擇題',['radio','checkbox','agree']],['版面',['heading','note','image','divider']]];
+const pfGroups=()=>PFPAY?[['匯款回報專用',['ordersum','bankinfo','last5']],...PF_GROUPS.slice(1)]:PF_GROUPS;
 const PF_REQ=['text','textarea','email','url','tel','number','date','time','select','radio','checkbox','agree'];
 const PF_IC={
  text:'<path d="M5 6V4h14v2M12 4v16M9 20h6"/>',textarea:'<path d="M4 7h16M4 12h16M4 17h10"/>',
@@ -837,12 +842,13 @@ const PF_IC={
  divider:'<path d="M5 12h14"/>',
  image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.500"/><path d="M21 16l-5-5-8 8"/>',
  products:'<path d="M6 8h12l1 12H5z"/><path d="M9 8a3 3 0 0 1 6 0"/>',pickup:'<path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.600"/><circle cx="17" cy="18" r="1.600"/>',
- section:'<rect x="3" y="4" width="18" height="6" rx="1.500" fill="currentColor"/><rect x="3" y="13" width="18" height="7" rx="1.500"/>'};
+ ordersum:'<path d="M6 8h12l1 12H5z"/><path d="M9 8a3 3 0 0 1 6 0"/>',bankinfo:'<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/>',last5:'<path d="M5 9h14M5 15h14M10 4L8 20M16 4l-2 16"/>',
+section:'<rect x="3" y="4" width="18" height="6" rx="1.500" fill="currentColor"/><rect x="3" y="13" width="18" height="7" rx="1.500"/>'};
 const fic=k=>`<svg class="ic fo" viewBox="0 0 24 24">${PF_IC[k]||''}</svg>`;
 const pfImgSt=b=>{const a=b.align||'center';return `width:${b.size||100}%;margin-left:${a=='left'?0:'auto'};margin-right:${a=='right'?0:'auto'}`};
 const pfv=k=>PRC?PRC[k]:S.pre[k];
-const pfSnap=()=>({pids:(S.pre.ev==null||S.pre.ev==S.cur)?[...S.pre.pids]:[],title:S.pre.title||'',note:S.pre.note||'',bank:S.pre.bank||'',days:S.pre.days||3,shop:S.pre.shop||'',formBase:S.pre.formBase||'',formFull:!!S.pre.formFull,api:S.pre.api||'',sender:S.pre.sender||'',deadline:S.pre.deadline||'',blocks:JSON.parse(JSON.stringify(S.pre.blocks&&S.pre.blocks.length?S.pre.blocks:pfDefBlocks()))});
-const pfB=id=>PRC.blocks.find(b=>b.id==id);
+const pfSnap=()=>({pids:(S.pre.ev==null||S.pre.ev==S.cur)?[...S.pre.pids]:[],title:S.pre.title||'',note:S.pre.note||'',bank:S.pre.bank||'',days:S.pre.days||3,shop:S.pre.shop||'',formBase:S.pre.formBase||'',formFull:!!S.pre.formFull,api:S.pre.api||'',sender:S.pre.sender||'',deadline:S.pre.deadline||'',payTitle:S.pre.payTitle||'',payNote:S.pre.payNote||'',payBlocks:JSON.parse(JSON.stringify(S.pre.payBlocks&&S.pre.payBlocks.length?S.pre.payBlocks:pfDefPay())),blocks:JSON.parse(JSON.stringify(S.pre.blocks&&S.pre.blocks.length?S.pre.blocks:pfDefBlocks()))});
+const pfB=id=>pfBl().find(b=>b.id==id);
 function pfSetB(id,k,v){const b=pfB(id);if(b)b[k]=v}
 function pfSetOpt(id,j,v){const b=pfB(id);if(b&&b.opts[j])b.opts[j]=typeof b.opts[j]=='object'?Object.assign(b.opts[j],{label:v}):v}
 function pfAddOpt(id){const b=pfB(id);if(!b)return;b.opts.push('選項 '+(b.opts.length+1));pfEdit(1)}
@@ -857,10 +863,10 @@ function pfPickTog(id,el){const a=PRC.pids,i=a.indexOf(id);if(i>=0)a.splice(i,1)
 function pfPickAll(on){PRC.pids=on?S.products.filter(p=>inEv(p,S.cur)&&!p.off).map(p=>p.id):[];pfProdRef();pfProdPick(1)}
 function pfAl(b){return `<div class="sub" style="margin:10px 0 4px">對齊方式</div><div class="chips" style="margin:0">${[['left','靠左'],['center','置中'],['right','靠右']].map(x=>`<button class="chip ${(b.align||'left')==x[0]?'on':''}" onclick="pfSetB('${b.id}','align','${x[0]}');pfEdit(1)">${x[1]}</button>`).join('')}</div>`}
 function pfBlk(b){
- const t=b.type,cp=!(t=='products'||t=='pickup');
+ const t=b.type,cp=!PF_ONE.includes(t);
  const hd=`<span class="pf-hd" onpointerdown="pfDrag(event,'${b.id}')">${I.menu}</span>`;
  const del=`<button class="pf-x" onclick="pfDel('${b.id}')">${I.trash}</button>`;
- const rq=PF_REQ.includes(t)?`<label class="pf-rq"><input type="checkbox" ${b.req?'checked':''} onchange="pfSetB('${b.id}','req',this.checked?1:0)">必填</label>`:'';
+ const rq=PF_REQ.includes(t)&&t!='last5'?`<label class="pf-rq"><input type="checkbox" ${b.req?'checked':''} onchange="pfSetB('${b.id}','req',this.checked?1:0)">必填</label>`:'';
  const lab=(ph,cls)=>`<input class="pf-lab ${cls||''}" value="${esc(b.label||'')}" placeholder="${ph}" oninput="pfSetB('${b.id}','label',this.value)">`;
  const ph=()=>`<input class="pf-mini" value="${esc(b.ph||'')}" placeholder="提示文字（選填）" oninput="pfSetB('${b.id}','ph',this.value);this.closest('.pf-blk').querySelectorAll('.pf-prev input,.pf-prev textarea').forEach(x=>x.placeholder=this.value)">`;
  let body='';
@@ -871,19 +877,23 @@ function pfBlk(b){
  else if(t=='heading'){body=`${lab('標題','hd')}<textarea rows="2" placeholder="內文（選填）" oninput="pfSetB('${b.id}','text',this.value)">${esc(b.text||'')}</textarea>${pfAl(b)}`}
  else if(t=='note'){body=`<textarea rows="3" placeholder="輸入說明文字" oninput="pfSetB('${b.id}','text',this.value)">${esc(b.text||'')}</textarea>${pfAl(b)}`}
  else if(t=='divider'){body='<div class="pf-hr"></div>'}
- else if(t=='image'){body=`${b.url?`<div class="pf-imw" style="${pfImgSt(b)}"><img src="${esc(b.url)}" alt="" draggable="false">${['tl','tr','bl','br'].map(h=>`<i class="pf-hd2 ${h}" onpointerdown="pfImgRs(event,'${b.id}','${h}')"></i>`).join('')}<span class="pf-sz">${b.size||100}%</span></div><div class="sub" style="margin:8px 0 0;font-size:12px">拖曳圖片四個角可以放大縮小</div>`:'<div class="pf-img ph">尚未選擇圖片</div>'}<input class="pf-mini" value="${esc(b.url||'')}" placeholder="貼上圖片（或圖片網址）" autocomplete="off" autocapitalize="off" onpaste="pfPasteImg(event,'${b.id}')" oninput="pfSetB('${b.id}','url',this.value)" onchange="pfEdit(1)"><label class="p2 sm" style="display:inline-block;margin-top:8px">上傳圖片<input type="file" accept="image/*" hidden onchange="pfImg('${b.id}',this.files[0]);this.value=''"></label><div class="sub" style="margin:10px 0 4px">對齊方式</div><div class="chips" style="margin:0">${[['left','靠左'],['center','置中'],['right','靠右']].map(x=>`<button class="chip ${(b.align||'center')==x[0]?'on':''}" onclick="pfSetB('${b.id}','align','${x[0]}');pfEdit(1)">${x[1]}</button>`).join('')}</div>`}
- else if(t=='section'){body=lab('區塊標題','sec')+pfAl(b)}
+ else if(t=='image'){body=`${b.url?`<div class="pf-imw" style="${pfImgSt(b)}"><img src="${esc(b.url)}" alt="" draggable="false">${['tl','tr','bl','br'].map(h=>`<i class="pf-hd2 ${h}" onpointerdown="pfImgRs(event,'${b.id}','${h}')"></i>`).join('')}<span class="pf-sz">${b.size||100}%</span></div><div class="sub" style="margin:8px 0 0;font-size:12px">拖曳圖片四個角可以放大縮小</div>`:'<div class="pf-img ph">尚未選擇圖片</div>'}<div class="row" style="gap:8px;margin-top:8px;justify-content:flex-start"><label class="p2 sm" style="display:inline-block">${b.url?'替換圖片':'上傳圖片'}<input type="file" accept="image/*" hidden onchange="pfImg('${b.id}',this.files[0]);this.value=''"></label><input class="pf-mini" style="flex:1;min-width:0;margin:0" value="" placeholder="或在這裡貼上圖片" autocomplete="off" autocapitalize="off" onpaste="pfPasteImg(event,'${b.id}')" oninput="this.value=''"></div><div class="sub" style="margin:10px 0 4px">對齊方式</div><div class="chips" style="margin:0">${[['left','靠左'],['center','置中'],['right','靠右']].map(x=>`<button class="chip ${(b.align||'center')==x[0]?'on':''}" onclick="pfSetB('${b.id}','align','${x[0]}');pfEdit(1)">${x[1]}</button>`).join('')}</div>`}
+ else if(t=='ordersum'){body=`${lab('標題')}<div class="sub" style="margin:8px 0 0">自動顯示客人的訂單品項與應付金額</div>`}
+  else if(t=='bankinfo'){body=`${lab('標題')}<div class="sub" style="margin:8px 0 0;white-space:pre-wrap">顯示「寄信設定」裡的匯款資訊：${esc(pfv('bank')||'（尚未填寫）')}</div>`}
+  else if(t=='last5'){body=`${lab('欄位標題')}${ph()}<div class="pf-prev" style="margin-top:6px"><input disabled type="text" placeholder="${esc(b.ph||'')}"></div><div class="sub" style="margin:8px 0 0">必填，客人要填 5 位數字</div>`}
+  else if(t=='section'){body=lab('區塊標題','sec')+pfAl(b)}
  else{const prev=t=='textarea'?`<textarea rows="2" disabled placeholder="${esc(b.ph||'')}"></textarea>`:`<input disabled type="text" placeholder="${esc(b.ph||'')}">`;
   body=`${lab('欄位標題')}${['text','textarea','email','url','tel','number'].includes(t)?ph():''}<div class="pf-prev" style="margin-top:6px">${prev}</div>`}
  return `<div class="sw pf-blk ${cp?'s2':''}" data-b="${b.id}">${cp?`<button class="cp2" onclick="pfCopy('${b.id}')">複製</button>`:''}<button class="del" onclick="pfDel('${b.id}')">刪除</button><div class="in"><div class="pf-bh">${hd}<span class="tag">${PF_N[t]}</span>${rq}${del}</div>${body}</div></div>`}
-function pfEdit(keep){const o=$('#pfe');if(!keep){PRC=pfSnap();PRC0=JSON.stringify(PRC)}
+function pfTab(n){PFPAY=n;pfEdit(1);const sc=$('#pfe .pf-body');if(sc)sc.scrollTop=0}
+function pfEdit(keep){const o=$('#pfe');if(!keep){PFPAY=0;PRC=pfSnap();PRC0=JSON.stringify(PRC)}
  const sc=o.querySelector('.pf-body'),top=sc?sc.scrollTop:0,evn=(S.events.find(e=>e.id==S.cur)||{}).name||'';
  o.innerHTML=`<div class="pf-top"><button class="p2" onclick="pfClose()">關閉</button><b>編輯預購表單</b><span class="rw" style="gap:6px"><span class="pf-st ${S.pre.open?'on':''}">${S.pre.open?'已發布':'未發布'}</span><button class="p2 sm" onclick="pfPreview()">預覽</button></span></div>
  <div class="pf-body"><div class="pf-wrap">
- <div class="pf-ev">對應場次：<b style="color:var(--tx)">${esc(evn)}</b></div>
- <input class="pf-h1" placeholder="表單標題（例如：○○ 預購）" value="${esc(PRC.title)}" oninput="PRC.title=this.value">
- <textarea class="pf-note" rows="2" placeholder="說明文字（選填，例如截止日期、取貨說明）" oninput="PRC.note=this.value">${esc(PRC.note)}</textarea>
- <div id="pfl">${PRC.blocks.map(pfBlk).join('')}</div>
+ <div class="chips" style="margin:0 0 12px"><button class="chip ${PFPAY?'':'on'}" onclick="pfTab(0)">預購表單</button><button class="chip ${PFPAY?'on':''}" onclick="pfTab(1)">匯款回報頁</button></div>
+  <div class="pf-ev">對應場次：<b style="color:var(--tx)">${esc(evn)}</b></div>
+ ${PFPAY?`<input class="pf-h1" placeholder="匯款回報頁標題（預設：匯款回報）" value="${esc(PRC.payTitle)}" oninput="PRC.payTitle=this.value"><textarea class="pf-note" rows="2" placeholder="說明文字（選填，例如匯款後多久會確認）" oninput="PRC.payNote=this.value">${esc(PRC.payNote)}</textarea>`:`<input class="pf-h1" placeholder="表單標題（例如：○○ 預購）" value="${esc(PRC.title)}" oninput="PRC.title=this.value"><textarea class="pf-note" rows="2" placeholder="說明文字（選填，例如截止日期、取貨說明）" oninput="PRC.note=this.value">${esc(PRC.note)}</textarea>`}
+  <div id="pfl">${pfBl().map(pfBlk).join('')}</div>
  ${S.pre.open?`<button class="btn o" style="width:100%;margin-top:18px;color:var(--red)" onclick="pfStop()">停止發布（表單會顯示尚未開放）</button>`:''}
  </div></div>
  <div class="pf-fab"><button class="pf-fb" onclick="pfMenu()" aria-label="表單設定">${I.menu}</button><button class="pf-fb pl" onclick="pfAddM()" aria-label="新增元件">${I.plus}</button></div>
@@ -895,8 +905,8 @@ function pfSwipe(){document.querySelectorAll('#pfl .sw').forEach(el=>{let x0=nul
   if(dx<-50){document.querySelectorAll('#pfl .sw.open').forEach(s=>s!==el&&s.classList.remove('open'));el.classList.add('open');x0=null}else if(dx>50){el.classList.remove('open');x0=null}});
  el.addEventListener('pointerup',()=>x0=null);el.addEventListener('pointercancel',()=>x0=null);
  el.addEventListener('click',e=>{if(moved){e.stopPropagation();e.preventDefault();return}if(was&&e.target.closest('.in')){e.stopPropagation();e.preventDefault();el.classList.remove('open');was=false}},true)})}
-function pfCopy(id){const i=PRC.blocks.findIndex(b=>b.id==id);if(i<0)return;const c=JSON.parse(JSON.stringify(PRC.blocks[i]));c.id=uid();delete c.key;if(c.label)c.label+=' 副本';PRC.blocks.splice(i+1,0,c);pfEdit(1);toast('已複製')}
-async function pfDel(id){if(!await ask('確認刪除這個元件？','刪除'))return;PRC.blocks=PRC.blocks.filter(b=>b.id!=id);pfEdit(1)}
+function pfCopy(id){const bl=pfBl(),i=bl.findIndex(b=>b.id==id);if(i<0)return;const c=JSON.parse(JSON.stringify(bl[i]));c.id=uid();delete c.key;if(c.label)c.label+=' 副本';bl.splice(i+1,0,c);pfEdit(1);toast('已複製')}
+async function pfDel(id){const b0=pfB(id);if(b0&&b0.type=='last5')return toast('匯款回報頁一定要有「匯款帳號後五碼」');if(!await ask('確認刪除這個元件？','刪除'))return;pfSetBl(pfBl().filter(b=>b.id!=id));pfEdit(1)}
 /* 拖曳排序：按住左側 ≡ 拖動 */
 function pfDrag(e,id){e.preventDefault();const list=$('#pfl'),el=list.querySelector('[data-b="'+id+'"]'),sc=$('#pfe .pf-body');if(!el)return;
  const h=e.currentTarget;try{h.setPointerCapture(e.pointerId)}catch(_){}
@@ -909,17 +919,18 @@ function pfDrag(e,id){e.preventDefault();const list=$('#pfl'),el=list.querySelec
  const mv=ev=>{y=ev.clientY};
  const up=()=>{if(!on)return;on=false;h.removeEventListener('pointermove',mv);h.removeEventListener('pointerup',up);h.removeEventListener('pointercancel',up);
   el.style.transform='';el.classList.remove('pf-drag');
-  const ord=[...list.children].map(x=>x.dataset.b);PRC.blocks=ord.map(i=>pfB(i));pfEdit(1)};
+  const ord=[...list.children].map(x=>x.dataset.b);pfSetBl(ord.map(i=>pfB(i)));pfEdit(1)};
  h.addEventListener('pointermove',mv);h.addEventListener('pointerup',up);h.addEventListener('pointercancel',up);loop()}
 /* + 新增元件 */
-function pfAddM(){ANI=1;TALL=1;openM(`<div class="sh row"><span style="width:56px"></span><b style="font-size:17px">新增表單元件</b><button class="p2" onclick="closeM()">關閉</button></div><div class="sbody"><div class="pf-addc">${PF_GROUPS.map(g=>{const ks=g[1].filter(k=>!(k=='products'||k=='pickup')||!PRC.blocks.some(x=>x.type==k));return ks.length?`<div class="pf-gt">${g[0]}</div><div class="pf-gl"></div><div class="pf-gr">${ks.map(k=>`<button class="pf-ty" onclick="pfAdd('${k}')">${fic(k)}<span>${k=='pickup'?'領取方式':PF_N[k]}</span></button>`).join('')}</div>`:''}).join('')}</div></div>`)}
-function pfAdd(k){if((k=='products'||k=='pickup')&&PRC.blocks.some(x=>x.type==k))return toast('表單裡已經有「'+PF_N[k]+'」了');const b={id:uid(),type:k,label:PF_N[k]};
+function pfAddM(){ANI=1;TALL=1;openM(`<div class="sh row"><span style="width:56px"></span><b style="font-size:17px">新增表單元件</b><button class="p2" onclick="closeM()">關閉</button></div><div class="sbody"><div class="pf-addc">${pfGroups().map(g=>{const ks=g[1].filter(k=>!PF_ONE.includes(k)||!pfBl().some(x=>x.type==k));return ks.length?`<div class="pf-gt">${g[0]}</div><div class="pf-gl"></div><div class="pf-gr">${ks.map(k=>`<button class="pf-ty" onclick="pfAdd('${k}')">${fic(k)}<span>${k=='pickup'?'領取方式':PF_N[k]}</span></button>`).join('')}</div>`:''}).join('')}</div></div>`)}
+function pfAdd(k){if(PF_ONE.includes(k)&&pfBl().some(x=>x.type==k))return toast('表單裡已經有「'+PF_N[k]+'」了');const b={id:uid(),type:k,label:PF_N[k]};
  if(k=='products')b.label='選擇商品';if(k=='pickup'){b.label='領取方式';b.opts=[{id:'onsite',label:'現場取貨'},{id:'ship',label:'通販（賣場下單）'}]}
  if(['select','radio','checkbox'].includes(k))b.opts=['選項 1','選項 2'];
  if(k=='agree'){b.label='我同意以上條款';b.text='';b.req=1}
  if(k=='heading')b.label='標題';if(k=='section')b.label='區塊標題';
  if(k=='note'||k=='divider'||k=='image'){delete b.label;b.text='';b.url=''}
- PRC.blocks.push(b);closeM();pfEdit(1);const sc=$('#pfe .pf-body');sc.scrollTop=sc.scrollHeight}
+ if(k=='last5'){b.req=1;b.ph='例如 12345'}
+  pfBl().push(b);closeM();pfEdit(1);const sc=$('#pfe .pf-body');sc.scrollTop=sc.scrollHeight}
 function pfShrink(f){return new Promise((ok,no)=>{const im=new Image();im.onload=()=>{const s=Math.min(1,1280/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext('2d').drawImage(im,0,0,c.width,c.height);c.toBlob(b=>b?ok(b):no(new Error('轉檔失敗')),'image/jpeg',.85)};im.onerror=()=>no(new Error('讀取圖片失敗'));im.src=URL.createObjectURL(f)})}
 async function pfImg(id,f){if(!f)return;if(!sb||!USER)return toast('請先登入才能上傳圖片');toast('上傳中…');try{const u=await upImg(await pfShrink(f));pfSetB(id,'url',u);pfEdit(1)}catch(e){toast('上傳失敗：'+errMsg(e))}}
 function pfImgRs(e,id,h){e.preventDefault();e.stopPropagation();const w=e.currentTarget.closest('.pf-imw'),bx=w.parentElement,bw=bx.clientWidth||1,b=pfB(id);if(!b)return;const a=b.align||'center',s0=b.size||100,x0=e.clientX,y0=e.clientY,w0=w.offsetWidth||1,h0=w.offsetHeight||1,sx=h.includes('l')?-1:1,sy=h.includes('t')?-1:1,lab=w.querySelector('.pf-sz'),k=a=='center'?2:1;
@@ -958,7 +969,7 @@ function mailEd(kind,fm){MC={bank:S.pre.bank||'',days:S.pre.days||3,shop:S.pre.s
  <label class="pf-f"><span>匯款資訊（寄給場取的客人）</span><textarea rows="3" placeholder="銀行（代碼）／帳號／戶名" oninput="MC.bank=this.value">${esc(MC.bank)}</textarea></label>
  <label class="pf-f" style="margin:0"><span>賣場連結（好賣，通販用）</span><input placeholder="https://" autocapitalize="off" value="${esc(MC.shop)}" oninput="MC.shop=this.value"></label>`:`
  <label class="pf-f"><span>匯款期限（天）</span><input type="number" inputmode="numeric" placeholder="3" value="${esc(MC.days)}" oninput="MC.days=this.value"></label>
- <label class="pf-f"><span>寄件人名稱（預設用表單標題）</span><input value="${esc(MC.sender)}" oninput="MC.sender=this.value"></label>
+ <label class="pf-f"><span>寄件人名稱（不填則用 Gmail 帳號名稱，與表單標題無關）</span><input value="${esc(MC.sender)}" oninput="MC.sender=this.value"></label>
  <label class="pf-f" style="margin:0"><span>後台網址（Apps Script 部署後的網址）</span><input placeholder="https://script.google.com/macros/s/…/exec" autocapitalize="off" value="${esc(MC.api)}" oninput="MC.api=this.value"></label>
  <label class="pf-f" style="margin:12px 0 0"><span>預購表單網址（Netlify 等；留空＝用目前網站）</span><input placeholder="https://你的網站.netlify.app/" inputmode="url" autocapitalize="off" value="${esc(MC.formBase)}" oninput="MC.formBase=this.value"></label>`}</div></div>`)}
 const mailCfgM=()=>mailEd('set'),mailInfoM=fm=>mailEd('info',fm);
@@ -975,6 +986,9 @@ function pvField(b){const t=b.type,L=`<div class="pv-l">${esc(b.label||'')}${b.r
  if(t=='heading')return `<div class="pv-hd" style="${AL}">${esc(b.label||'')}</div>${b.text?`<div class="pv-tx" style="${AL}">${esc(b.text)}</div>`:''}`;
  if(t=='note')return `<div class="pv-tx" style="${AL}">${esc(b.text||'')}</div>`;
  if(t=='divider')return '<div class="pf-hr"></div>';
+  if(t=='ordersum')return `<div class="pvs" style="margin-top:0"><div class="pvs-h"><span>品項</span><span>數量</span><span>金額</span></div><div class="pvs-r"><span>商品 A</span><span>2</span><span>$ 300</span></div><div class="pf-hr" style="margin:10px 0"></div><div class="row"><b>應付</b><b style="font-size:18px">$ 300</b></div></div>`;
+  if(t=='bankinfo')return `<div class="pv-l">${esc(b.label||'匯款資訊')}</div><div style="white-space:pre-wrap">${esc(pfv('bank')||'（尚未填寫匯款資訊）')}</div>`;
+  if(t=='last5')return `${L}<input type="text" inputmode="numeric" maxlength="5" placeholder="${p}">`;
  if(t=='image')return b.url?`<img class="pf-img" style="${pfImgSt(b)}" src="${esc(b.url)}" alt="">`:'';
  if(t=='products')return `<div id="pvprod"></div>`;
  if(t=='pickup')return `<div class="pv-l">${esc(b.label||'')}<i>*</i></div><div id="pvpk">${b.opts.map(o=>`<label class="pv-o"><input type="radio" name="pvpk" ${PVP==o.id?'checked':''} onchange="PVP='${o.id}'">${esc(o.label)}</label>`).join('')}</div>`;
@@ -1031,9 +1045,9 @@ function pvZoom(){const p=P(PVD);if(!p)return;const im=pvImgs(p);let z=$('#pvz')
  const end=()=>{if(x0==null)return;const d=dx;x0=null;const pp=P(PVD),n=pp?pvImgs(pp).length:0;if(mv&&n>1&&Math.abs(d)>50){PVI=(PVI+(d<0?1:n-1))%n;pvGo(PVI);pvZoom()}else{const m=z.querySelector('img');if(m){m.style.transition='transform .15s';m.style.transform=''}}setTimeout(()=>{mv=0},60)};
  z.onpointerup=end;z.onpointercancel=end;document.body.appendChild(z)}
  z.innerHTML=`<img src="${esc(im[PVI])}" alt="">${im.length>1?`<button class="pvz-a l" onclick="event.stopPropagation();PVI=(PVI+${im.length-1})%${im.length};pvGo(PVI);pvZoom()">‹</button><button class="pvz-a r" onclick="event.stopPropagation();PVI=(PVI+1)%${im.length};pvGo(PVI);pvZoom()">›</button>`:''}<span class="pvz-x">×</span>`;z.classList.add('on')}
-function pfPreview(){PVQ={};PVP='onsite';PVC='';PVW=[];pvClose();TALL=1;ANI=1;openM(`<div class="sh row"><span style="width:56px"></span><b style="font-size:17px">預覽表單</b><button class="p2" onclick="closeM()">關閉</button></div><div class="sbody"><div class="pv"><div class="pv-t">${esc(PRC.title||'（尚未填寫標題）')}</div>${PRC.note?`<div class="pv-tx">${esc(PRC.note)}</div>`:''}${PRC.blocks.map(b=>`<div class="pv-b">${pvField(b)}</div>`).join('')}<div class="row" style="margin-top:18px"><button class="p2" onclick="pfTestM('pfPreview()')">寄送測試信</button><button class="pf-btn" disabled style="opacity:.4">送出預購</button></div><div class="cap" style="text-align:center">預覽模式，不會真的送出</div></div></div>`);pvProd()}
-function pfApply(){PRC.blocks.forEach(b=>{if(['select','radio','checkbox'].includes(b.type)&&!Array.isArray(b.opts))b.opts=['選項 1','選項 2'];if(b.id==null)b.id=uid()});PRC.days=Math.max(1,Math.round(+PRC.days)||3);['title','note','bank','shop','api','sender'].forEach(k=>PRC[k]=String(PRC[k]||'').trim());
- Object.assign(S.pre,{ts:Date.now(),ev:S.cur,pids:PRC.pids.filter(id=>{const p=P(id);return p&&inEv(p,S.cur)}),title:PRC.title,note:PRC.note,bank:PRC.bank,days:PRC.days,shop:PRC.shop,formBase:pfNormBase(PRC.formBase),formFull:!!PRC.formFull,api:PRC.api,sender:PRC.sender,deadline:PRC.deadline||'',blocks:JSON.parse(JSON.stringify(PRC.blocks))});S.pre.formUrl=pfLink();PRC.pids=[...S.pre.pids];PRC0=JSON.stringify(PRC)}
+function pfPreview(){if(!PFPAY)PVQ={};PVP='onsite';PVC='';PVW=[];pvClose();TALL=1;ANI=1;openM(`<div class="sh row"><span style="width:56px"></span><b style="font-size:17px">預覽表單</b><button class="p2" onclick="closeM()">關閉</button></div><div class="sbody"><div class="pv"><div class="pv-t">${esc(PFPAY?(PRC.payTitle||'匯款回報'):(PRC.title||'（尚未填寫標題）'))}</div>${(PFPAY?PRC.payNote:PRC.note)?`<div class="pv-tx">${esc(PFPAY?PRC.payNote:PRC.note)}</div>`:''}${pfBl().map(b=>`<div class="pv-b">${pvField(b)}</div>`).join('')}<div class="row" style="margin-top:18px">${PFPAY?'<span></span>':'<button class="p2" onclick="pfTestM(\'pfPreview()\')">寄送測試信</button>'}<button class="pf-btn" disabled style="opacity:.4">${PFPAY?'回報已匯款':'送出預購'}</button></div><div class="cap" style="text-align:center">預覽模式，不會真的送出</div></div></div>`);pvProd()}
+function pfApply(){[...PRC.blocks,...PRC.payBlocks].forEach(b=>{if(['select','radio','checkbox'].includes(b.type)&&!Array.isArray(b.opts))b.opts=['選項 1','選項 2'];if(b.id==null)b.id=uid()});PRC.days=Math.max(1,Math.round(+PRC.days)||3);['title','note','bank','shop','api','sender'].forEach(k=>PRC[k]=String(PRC[k]||'').trim());
+ Object.assign(S.pre,{ts:Date.now(),ev:S.cur,pids:PRC.pids.filter(id=>{const p=P(id);return p&&inEv(p,S.cur)}),title:PRC.title,note:PRC.note,bank:PRC.bank,days:PRC.days,shop:PRC.shop,formBase:pfNormBase(PRC.formBase),formFull:!!PRC.formFull,api:PRC.api,sender:PRC.sender,deadline:PRC.deadline||'',payTitle:String(PRC.payTitle||'').trim(),payNote:String(PRC.payNote||'').trim(),payBlocks:JSON.parse(JSON.stringify(PRC.payBlocks)),blocks:JSON.parse(JSON.stringify(PRC.blocks))});S.pre.formUrl=pfLink();PRC.pids=[...S.pre.pids];PRC0=JSON.stringify(PRC)}
 function pfSave(){if(PRC.api&&!/^https:\/\/script\.google\.com\//.test(PRC.api.trim()))return toast('後台網址應該是 script.google.com 開頭（在右下角選單裡）');pfApply();save();pfEdit(1);toast('已儲存')}
 async function pfPause(){if(!await ask('暫停後客人將無法填單，確定暫停發布？','暫停發布'))return;S.pre.open=false;S.pre.ts=Date.now();save();pfEdit(1);toast('已暫停發布')}
 function pfPublish(){const api=String(PRC.api||'').trim();if(!/^https:\/\/script\.google\.com\//.test(api))return toast('請先到右下角選單填後台網址（script.google.com 開頭）');if(!PRC.blocks.some(b=>b.type=='products'))return toast('請先用 ＋ 新增「商品選擇」');if(!PRC.pids.length)return toast('請至少選擇一項商品');if(PRC.deadline&&new Date(PRC.deadline).getTime()<=Date.now())return toast('截止填單時間已過，請到表單設定修改');if(!String(PRC.title||'').trim())return toast('請填表單標題');
@@ -1054,7 +1068,7 @@ function tplClean(html){const d=document.createElement('div');d.innerHTML=html;c
   if(c.tagName=='A')c.setAttribute('target','_blank')})};walk(d);return d.innerHTML}
 const tplH2T=h=>{const d=document.createElement('div');d.innerHTML=String(h).replace(/<br\s*\/?>/gi,'\n').replace(/<\/(div|p)>/gi,'\n');return d.textContent.replace(/\n{3,}/g,'\n\n').trim()};
 function tplOpen(k,fm){const t=S.pre.tpl[k],h=t.h||tplT2H(t.b),lt=Object.assign({pay:'點此回報匯款',shop:'前往賣場'},S.pre.linkTxt||{});TPD={k,fm,s:t.s,h,v:0,lt,s0:t.s,h0:h,l0:JSON.stringify(lt)};tplR()}
-function tplFill(s,md){const d=new Date(Date.now()+(Math.max(1,+pfv('days')||3))*864e5),m={'{暱稱}':'小明','{訂單編號}':'0123','{商品清單}':'・商品 A ×2　$300\n・商品 B ×1　$150','{總額}':'$450','{取貨方式}':md=='ship'?'通販（賣場下單）':'現場取貨','{期限}':d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate(),'{匯款資訊}':pfv('bank')||'（尚未填寫匯款資訊）','{回報連結}':'https://（匯款回報頁面）','{賣場連結}':pfv('shop')||'https://（賣場連結）','{店名}':pfv('sender')||pfv('title')||'店名','{填寫內容}':'・商品：商品 A ×2、商品 B ×1\n・領取方式：現場取貨\n・暱稱：小明\n・社群網址：https://example.com\n・Email：test@example.com'};if(md=='ship'){m['{匯款資訊}']='';m['{期限}']='';m['{回報連結}']=''}else if(md=='onsite')m['{賣場連結}']='';return s.replace(/\{[^}]+\}/g,x=>x in m?m[x]:x)}
+function tplFill(s,md){const d=new Date(Date.now()+(Math.max(1,+pfv('days')||3))*864e5),m={'{暱稱}':'小明','{訂單編號}':'0123','{商品清單}':'・商品 A ×2　$300\n・商品 B ×1　$150','{總額}':'$450','{取貨方式}':md=='ship'?'通販（賣場下單）':'現場取貨','{期限}':d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate(),'{匯款資訊}':pfv('bank')||'（尚未填寫匯款資訊）','{回報連結}':'https://（匯款回報頁面）','{賣場連結}':pfv('shop')||'https://（賣場連結）','{店名}':pfv('sender')||'店名','{填寫內容}':'・商品：商品 A ×2、商品 B ×1\n・領取方式：現場取貨\n・暱稱：小明\n・社群網址：https://example.com\n・Email：test@example.com'};if(md=='ship'){m['{匯款資訊}']='';m['{期限}']='';m['{回報連結}']=''}else if(md=='onsite')m['{賣場連結}']='';return s.replace(/\{[^}]+\}/g,x=>x in m?m[x]:x)}
 let TPR=null;
 document.addEventListener('selectionchange',()=>{const e=document.getElementById('tp_b');if(!e)return;const sl=getSelection();if(sl.rangeCount&&e.contains(sl.anchorNode))TPR=sl.getRangeAt(0).cloneRange()});
 function tplRestore(){const e=$('#tp_b');if(!e)return false;e.focus();if(TPR){const sl=getSelection();sl.removeAllRanges();sl.addRange(TPR)}return true}
@@ -1069,8 +1083,8 @@ function tplR(){const d=TPD,i=TPL_INFO[d.k];ANI=0;TALL=1;
  ${d.v?`<div class="sub" style="margin:0 2px 8px">以範例資料預覽，實際寄出會換成該筆訂單的內容。</div><div class="pf-card" style="padding:16px"><div style="font-weight:700;font-size:16px;margin-bottom:10px">${esc(tplFill(d.s))}</div><div style="line-height:1.7;font-size:15px;word-break:break-word">${tplFillH(d.h,d.k=='store'?'ship':'onsite',d.lt)}</div></div>`
  :`<div class="sub" style="margin:0 2px 6px">信件標題</div><input id="tp_s" value="${esc(d.s)}" oninput="TPD.s=this.value"><div class="sub" style="margin:14px 2px 6px">信件內容（選取文字後套用格式）</div>
  <div class="tpl-tb" onmousedown="if(event.target.tagName!='SELECT'&&event.target.tagName!='INPUT')event.preventDefault()">
-  <button class="chip" onclick="tplCmd('bold')"><b>B</b></button>
-  <select onchange="tplSize(this.value);this.value=''"><option value="">字級</option><option value="12px">小</option><option value="15px">一般</option><option value="18px">大</option><option value="22px">特大</option></select>
+  <span style="display:flex;gap:6px;align-items:center;flex-wrap:nowrap"><button class="chip" onclick="tplCmd('bold')"><b>B</b></button><button class="chip" onclick="tplCmd('italic')"><i style="font-family:serif">I</i></button><button class="chip" onclick="tplCmd('underline')"><u>U</u></button>
+  <select onchange="tplSize(this.value);this.value=''"><option value="">字級</option><option value="12px">小</option><option value="15px">一般</option><option value="18px">大</option><option value="22px">特大</option></select></span>
   <label class="chip">文字色<input type="color" value="#d32f2f" oninput="tplCmd('foreColor',this.value)"></label>
   <label class="chip">底色<input type="color" value="#fff3a0" oninput="tplCmd('hiliteColor',this.value)"></label>
   <button class="chip" onclick="tplCmd('hiliteColor','transparent')">清底色</button>
