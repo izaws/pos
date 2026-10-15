@@ -471,16 +471,17 @@ orders:[],rules:{full:[],buy:[]},nid:10};
 try{const r=localStorage.getItem(KEY);if(r)S=JSON.parse(r)}catch(e){}
 S.customers=S.customers||[];S.groups=S.groups||[];S.works=S.works||[];
 const DEF_TPL=()=>({
- copy:{s:'【{店名}】您的填單副本 {訂單編號}',b:'{暱稱} 您好，\n\n以下是您填寫的表單內容，請留存：\n\n{填寫內容}\n\n謝謝您的支持！'},
- confirm:{s:'【{店名}】訂單確認 {訂單編號}',b:'{暱稱} 您好，\n\n已收到您的預購，場取編號：{訂單編號}\n\n訂單內容：\n{商品清單}\n\n合計：{總額}\n取貨方式：{取貨方式}\n\n請於 {期限} 前完成匯款：\n金額：{總額}\n{匯款資訊}\n\n匯款完成後，請至下方連結回報（填後五碼即可）：\n{回報連結}\n\n逾期未匯款，訂單可能會被取消。\n\n謝謝您的支持！'},
- bank:{s:'【{店名}】匯款資訊與回報 {訂單編號}',b:'{暱稱} 您好，\n\n請於 {期限} 前完成匯款：\n金額：{總額}\n{匯款資訊}\n\n匯款完成後，請至下方連結回報（填後五碼即可）：\n{回報連結}\n\n逾期未匯款，訂單可能會被取消。'},
- remind:{s:'【{店名}】匯款提醒 {訂單編號}',b:'{暱稱} 您好，\n\n提醒您，預購 {訂單編號} 還沒有收到匯款回報。\n金額：{總額}　期限：{期限}\n{匯款資訊}\n\n匯款後請至這裡回報：\n{回報連結}\n\n若已匯款，請直接回報即可，謝謝！'},
- store:{s:'【{店名}】賣場下單連結 {訂單編號}',b:'{暱稱} 您好，\n\n您的預購商品已準備好，請至賣場下單（貨到付款）：\n{賣場連結}\n\n商品內容：\n{商品清單}\n\n謝謝您的支持！'}
+ copy:{s:'【{店名}】填單副本 {訂單編號}',b:'{暱稱} 您好，\n\n感謝您的預購！以下是您填寫的表單內容，請留存備查：\n\n{填寫內容}'},
+ confirm:{s:'【{店名}】訂單確認 {訂單編號}',b:'{暱稱} 您好，\n\n已收到您的預購訂單，感謝您的支持！\n\n■ 訂單編號：{訂單編號}\n■ 取貨方式：{取貨方式}\n\n【訂單內容】\n{商品清單}\n合計：{總額}\n\n【匯款資訊】\n請於 {期限} 前完成匯款，金額 {總額}\n{匯款資訊}\n\n匯款完成後，請點下方連結回報（填帳號後五碼即可）：\n{回報連結}\n\n逾期未匯款，訂單可能會被取消。'},
+ store:{s:'【{店名}】訂單確認與賣場下單 {訂單編號}',b:'{暱稱} 您好，\n\n已收到您的預購訂單，感謝您的支持！\n\n■ 訂單編號：{訂單編號}\n■ 取貨方式：{取貨方式}\n\n【訂單內容】\n{商品清單}\n合計：{總額}\n\n【下單方式】\n請點下方連結至賣場下單（貨到付款）：\n{賣場連結}'},
+ remind:{s:'【{店名}】匯款提醒 {訂單編號}',b:'{暱稱} 您好，\n\n提醒您，預購訂單 {訂單編號} 尚未收到匯款回報。\n\n金額：{總額}\n期限：{期限}\n{匯款資訊}\n\n匯款後請點下方連結回報：\n{回報連結}\n\n若已匯款，直接回報即可，謝謝！'},
+ bank:{s:'【{店名}】匯款資訊 {訂單編號}',b:'{暱稱} 您好，\n\n請於 {期限} 前完成匯款，金額 {總額}\n{匯款資訊}\n\n匯款完成後，請點下方連結回報：\n{回報連結}'}
 });
 S.pre=Object.assign({auto:false,open:false,ev:null,pids:[],title:'',note:'',bank:'',days:3,shop:'',formUrl:'',formBase:'',formFull:false,api:'',sender:''},S.pre||{});
 S.pre.tpl=Object.assign(DEF_TPL(),S.pre.tpl||{});
 const OLD_CONF_S='【{店名}】預購訂單確認 {訂單編號}',OLD_CONF_B='{暱稱} 您好，\n\n已收到您的預購，訂單內容如下：\n{商品清單}\n\n合計：{總額}\n取貨方式：{取貨方式}\n\n謝謝您的支持！';
 const tplMig=()=>{const c=S.pre.tpl.confirm;if(c&&c.s===OLD_CONF_S&&c.b===OLD_CONF_B)S.pre.tpl.confirm=DEF_TPL().confirm};tplMig();
+if(S.pre.tplV!==3){S.pre.tpl=DEF_TPL();S.pre.tplV=3}
 const migOrders=()=>S.orders.forEach(o=>{if(o.type=='pre'&&o.status=='已完成')o.status='已取貨'});migOrders();
 const migProds=()=>S.products.forEach(p=>{if(!p.evs){p.evs={};S.events.forEach(e=>{p.evs[e.id]=p.stock==null?null:p.stock})}delete p.stock});migProds();
 S.set=Object.assign({color:'',lang:'zh'},S.set);if(S.set.color=='#E0B85A')S.set.color='';
@@ -1042,7 +1043,7 @@ function pfToggle(){if(S.pre.open){S.pre.open=false}else{const api=String(S.pre.
 async function pfStop(){if(!await ask('確認停止發布？客人打開連結會看到「尚未開放」。','停止發布'))return;S.pre.open=false;S.pre.ts=Date.now();save();pfEdit(1);toast('已停止發布')}
 async function pfClose(){const dirty=JSON.stringify(PRC)!==PRC0;if(dirty&&!await ask('有尚未儲存的修改，確定離開？','離開'))return;$('#pfe').classList.remove('on');PRC=null;r3()}
 /* ---- 信件模板：清單 → 編輯／預覽 ---- */
-const TPL_INFO={copy:['填單副本','填單後自動寄出（客人填寫的內容）'],confirm:['訂單確認信','填單後自動寄出（含匯款資訊、回報連結、場取編號）'],remind:['匯款提醒信','訂單詳情按鈕寄出（場取・尚未匯款）'],store:['賣場連結信','訂單詳情按鈕寄出（通販）']};
+const TPL_INFO={copy:['填單副本','填單後自動寄出（版面和客人填的表單一樣）'],confirm:['訂單確認信','填單後自動寄出（場取：含匯款資訊與回報連結）'],remind:['匯款提醒信','訂單詳情按鈕寄出（場取・尚未匯款）'],store:['賣場連結信','填單後自動寄出（通販：含賣場下單連結），也可從訂單詳情重寄']};
 const TPL_VARS=['{暱稱}','{訂單編號}','{商品清單}','{總額}','{取貨方式}','{期限}','{匯款資訊}','{回報連結}','{賣場連結}','{填寫內容}','{店名}'];
 function tplM(fm){TPD=null;ANI=1;TALL=1;const back=fm?'pfMenu()':'closeM()';
  openM(`<div class="sh row"><button class="p2" onclick="${back}">${fm?'返回':'關閉'}</button><b style="font-size:17px">信件模板</b><span style="width:56px"></span></div><div class="sbody"><div class="cap" style="margin:0 0 10px">點選模板即可編輯與預覽。</div><div class="grp">${Object.keys(TPL_INFO).map(k=>`<div class="li" onclick="tplOpen('${k}',${fm?1:0})"><span style="min-width:0;flex:1"><b>${TPL_INFO[k][0]}</b><div class="sub" style="margin:2px 0 0">${TPL_INFO[k][1]}</div><div class="sub" style="margin:2px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw">${esc(S.pre.tpl[k].s)}</div></span>${I.chev}</div>`).join('')}</div><div class="grp" style="margin-top:12px"><div class="li" onclick="mailInfoM(${fm?1:0})"><span class="rw">匯款資訊與賣場連結</span>${I.chev}</div></div></div>`)}
