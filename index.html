@@ -73,7 +73,7 @@ textarea.pf-note{font-size:14px;color:var(--sub);background:none;border:1.5px da
 .pf-f{display:block;margin-bottom:12px}.pf-f>span{display:block;font-size:13px;color:var(--sub);margin:0 2px 6px}
 .pf-f input,.pf-f textarea{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:12px;width:100%}.pf-card .pf-f input,.pf-card .pf-f textarea{background:var(--bg)}
 .pf-prev input:disabled,.pf-prev textarea:disabled{opacity:.6}
-.pf-bar{position:absolute;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--ln);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px))}
+.pf-bar{position:absolute;z-index:6;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--ln);padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px))}
 .pf-in{max-width:560px;margin:0 auto;display:flex;align-items:center;gap:10px}.pf-tot{flex:1;font-size:13px;color:var(--sub)}
 .pf-btn{background:var(--g);color:var(--gt);border:0;border-radius:14px;padding:14px 22px;font-size:16px;font-weight:600}
 .sw .in.nw{background:var(--nw,#fff3cc)}
@@ -375,9 +375,7 @@ input[type=datetime-local]{display:block;min-width:0;max-width:100%;width:100%;b
 .rte-ed{min-height:84px;background:var(--bg);border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.6;outline:0;word-break:break-word;white-space:normal}
 .rte-ed:empty:before{content:attr(data-ph);color:var(--sub);opacity:.7}
 .pf-note-rte .rte-ed{background:none;border:1.5px dashed var(--ln)}
-.pf-gap{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:10px;border-top:1px dashed var(--ln);font-size:12px;color:var(--sub)}
-.pf-gap input{flex:1;min-width:0;padding:0;background:none;height:22px;accent-color:var(--ac)}
-.pf-gap b{min-width:40px;text-align:right;font-weight:600;color:var(--tx)}
+.pf-space{display:flex;align-items:center;gap:10px;margin-top:8px;font-size:12px;color:var(--sub)}.pf-space input{flex:1;min-width:0;padding:0;background:none;height:22px;accent-color:var(--ac)}.pf-space b{min-width:40px;text-align:right;font-weight:600;color:var(--tx)}.sw:has(.tpl-pop[style*="block"]){overflow:visible}.rte .tpl-tb{margin-bottom:6px}
 .rich{white-space:normal!important}
 @media(min-width:768px) and (min-height:600px){
 #md_m,body:not(.w0) #co_m{align-items:flex-end;justify-content:center}
@@ -495,7 +493,8 @@ const DEF_TPL=()=>({
  confirm:{s:'【{店名}】訂單確認 {訂單編號}',b:'{暱稱} 您好，\n\n已收到您的預購訂單，感謝您的支持！\n\n■ 訂單編號：{訂單編號}\n■ 取貨方式：{取貨方式}\n\n【訂單內容】\n{商品清單}\n合計：{總額}\n\n【匯款資訊】\n請於 {期限} 前完成匯款，金額 {總額}\n{匯款資訊}\n\n匯款完成後，請點下方連結回報（填帳號後五碼即可）：\n{回報連結}\n\n逾期未匯款，訂單可能會被取消。'},
  store:{s:'【{店名}】訂單確認與賣場下單 {訂單編號}',b:'{暱稱} 您好，\n\n已收到您的預購訂單，感謝您的支持！\n\n■ 訂單編號：{訂單編號}\n■ 取貨方式：{取貨方式}\n\n【訂單內容】\n{商品清單}\n合計：{總額}\n\n【下單方式】\n請點下方連結至賣場下單（貨到付款）：\n{賣場連結}\n\n請於 {下單期限} 前完成下單。'},
  remind:{s:'【{店名}】匯款提醒 {訂單編號}',b:'{暱稱} 您好，\n\n提醒您，預購訂單 {訂單編號} 尚未收到匯款回報。\n\n金額：{總額}\n期限：{期限}\n{匯款資訊}\n\n匯款後請點下方連結回報：\n{回報連結}\n\n若已匯款，直接回報即可，謝謝！'},
- bank:{s:'【{店名}】匯款資訊 {訂單編號}',b:'{暱稱} 您好，\n\n請於 {期限} 前完成匯款，金額 {總額}\n{匯款資訊}\n\n匯款完成後，請點下方連結回報：\n{回報連結}'}
+ bank:{s:'【{店名}】匯款資訊 {訂單編號}',b:'{暱稱} 您好，\n\n請於 {期限} 前完成匯款，金額 {總額}\n{匯款資訊}\n\n匯款完成後，請點下方連結回報：\n{回報連結}'},
+  received:{s:'【{店名}】已收到匯款回報 {訂單編號}',b:'{暱稱} 您好，\n\n已收到您的匯款回報，感謝您！\n\n■ 訂單編號：{訂單編號}\n■ 金額：{總額}\n■ 匯款帳號後五碼：{後五碼}\n\n店家確認款項後會再通知您，請耐心等候。'}
 });
 S.pre=Object.assign({auto:false,open:false,ev:null,pids:[],title:'',note:'',bank:'',days:3,shop:'',formUrl:'',formBase:'',formFull:false,api:'',sender:''},S.pre||{});
 S.pre.tpl=Object.assign(DEF_TPL(),S.pre.tpl||{});
@@ -844,8 +843,8 @@ const pfDefBlocks=()=>[
  {id:'social',type:'url',key:'social',label:'社群網址',req:1},
  {id:'email',type:'email',key:'email',label:'Email',req:1},
  {id:'memo',type:'textarea',key:'memo',label:'備註'}];
-const PF_N={text:'單行文字',textarea:'多行文字',email:'電子郵件',url:'網址 / 社群連結',tel:'電話號碼',number:'數字',date:'日期',time:'時間',select:'下拉選單',radio:'單選題',checkbox:'複選題',agree:'同意條款',heading:'標題與內文',note:'純文字說明',divider:'分隔線',image:'圖片',section:'區塊標題',products:'商品選擇',pickup:'單選題（領取方式）',ordersum:'訂單明細',bankinfo:'匯款資訊',last5:'匯款帳號後五碼',paybtn:'前往回報按鈕'};
-const PF_GROUPS=[['預購專用',['products','pickup']],['輸入欄位',['text','textarea','email','url','tel','number','date']],['選擇題',['radio','checkbox','agree']],['版面',['heading','note','image','divider']]];
+const PF_N={text:'單行文字',textarea:'多行文字',email:'電子郵件',url:'網址 / 社群連結',tel:'電話號碼',number:'數字',date:'日期',time:'時間',select:'下拉選單',radio:'單選題',checkbox:'複選題',agree:'同意條款',heading:'標題與內文',note:'純文字說明',divider:'分隔線',space:'空白',image:'圖片',section:'區塊標題',products:'商品選擇',pickup:'單選題（領取方式）',ordersum:'訂單明細',bankinfo:'匯款資訊',last5:'匯款帳號後五碼',paybtn:'前往回報按鈕'};
+const PF_GROUPS=[['預購專用',['products','pickup']],['輸入欄位',['text','textarea','email','url','tel','number','date']],['選擇題',['radio','checkbox','agree']],['版面',['heading','note','image','divider','space']]];
 const pfGroups=()=>PFPAY==3?[['預購完成頁專用',PFDM=='ship'?['ordersum']:['ordersum','bankinfo','paybtn']],PF_GROUPS[3]]:PFPAY==2?[PF_GROUPS[3]]:PFPAY?[['匯款回報專用',['ordersum','bankinfo','last5']],...PF_GROUPS.slice(1)]:PF_GROUPS;
 const PF_REQ=['text','textarea','email','url','tel','number','date','time','select','radio','checkbox','agree'];
 const PF_IC={
@@ -861,7 +860,7 @@ const PF_IC={
  checkbox:'<path d="M4 6l2 2 3-3M4 14l2 2 3-3M13 7h7M13 15h7"/>',
  agree:'<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l3 3 5-6"/>',
  heading:'<path d="M6 4v16M18 4v16M6 12h12"/>',note:'<path d="M4 6h16M4 10h16M4 14h10M4 18h6"/>',
- divider:'<path d="M5 12h14"/>',
+ divider:'<path d="M5 12h14"/>',space:'<path d="M4 5h16M4 19h16M12 9v6M9.5 11.5L12 9l2.5 2.5M9.5 12.5L12 15l2.5-2.5"/>',
  image:'<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.500"/><path d="M21 16l-5-5-8 8"/>',
  products:'<path d="M6 8h12l1 12H5z"/><path d="M9 8a3 3 0 0 1 6 0"/>',pickup:'<path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.600"/><circle cx="17" cy="18" r="1.600"/>',
  paybtn:'<rect x="3" y="7" width="18" height="10" rx="5"/><path d="M9 12h6"/>',ordersum:'<path d="M6 8h12l1 12H5z"/><path d="M9 8a3 3 0 0 1 6 0"/>',bankinfo:'<rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/>',last5:'<path d="M5 9h14M5 15h14M10 4L8 20M16 4l-2 16"/>',
@@ -869,7 +868,8 @@ section:'<rect x="3" y="4" width="18" height="6" rx="1.500" fill="currentColor"/
 const fic=k=>`<svg class="ic fo" viewBox="0 0 24 24">${PF_IC[k]||''}</svg>`;
 const pfImgSt=b=>{const a=b.align||'center';return `width:${b.size||100}%;margin-left:${a=='left'?0:'auto'};margin-right:${a=='right'?0:'auto'}`};
 const pfv=k=>PRC?PRC[k]:S.pre[k];
-const pfSnap=()=>({pids:(S.pre.ev==null||S.pre.ev==S.cur)?[...S.pre.pids]:[],title:S.pre.title||'',note:S.pre.note||'',bank:S.pre.bank||'',days:S.pre.days||3,shop:S.pre.shop||'',formBase:S.pre.formBase||'',formFull:!!S.pre.formFull,api:S.pre.api||'',sender:S.pre.sender||'',deadline:S.pre.deadline||'',shopDue:S.pre.shopDue||'',payDue:S.pre.payDue||'',payTitle:S.pre.payTitle||'',doneTitle:S.pre.doneTitle==null?'已收到回報':S.pre.doneTitle,doneNote:S.pre.doneNote==null?'感謝您，店家確認款項後會再通知您。':S.pre.doneNote,doneBlocks:JSON.parse(JSON.stringify(S.pre.doneBlocks||[])),payNote:S.pre.payNote||'',payBlocks:JSON.parse(JSON.stringify(S.pre.payBlocks&&S.pre.payBlocks.length?S.pre.payBlocks:pfDefPay())),blocks:JSON.parse(JSON.stringify(S.pre.blocks&&S.pre.blocks.length?S.pre.blocks:pfDefBlocks())),noteH:S.pre.noteH||'',payNoteH:S.pre.payNoteH||'',doneNoteH:S.pre.doneNoteH||'',od:{onsite:pfOdSnap('onsite'),ship:pfOdSnap('ship')}});
+const pfSnap0=()=>({pids:(S.pre.ev==null||S.pre.ev==S.cur)?[...S.pre.pids]:[],title:S.pre.title||'',note:S.pre.note||'',bank:S.pre.bank||'',days:S.pre.days||3,shop:S.pre.shop||'',formBase:S.pre.formBase||'',formFull:!!S.pre.formFull,api:S.pre.api||'',sender:S.pre.sender||'',deadline:S.pre.deadline||'',shopDue:S.pre.shopDue||'',payDue:S.pre.payDue||'',payTitle:S.pre.payTitle||'',doneTitle:S.pre.doneTitle==null?'已收到回報':S.pre.doneTitle,doneNote:S.pre.doneNote==null?'感謝您，店家確認款項後會再通知您。':S.pre.doneNote,doneBlocks:JSON.parse(JSON.stringify(S.pre.doneBlocks||[])),payNote:S.pre.payNote||'',payBlocks:JSON.parse(JSON.stringify(S.pre.payBlocks&&S.pre.payBlocks.length?S.pre.payBlocks:pfDefPay())),blocks:JSON.parse(JSON.stringify(S.pre.blocks&&S.pre.blocks.length?S.pre.blocks:pfDefBlocks())),noteH:S.pre.noteH||'',payNoteH:S.pre.payNoteH||'',doneNoteH:S.pre.doneNoteH||'',od:{onsite:pfOdSnap('onsite'),ship:pfOdSnap('ship')}});
+const pfSnap=()=>{const r=pfSnap0();[...r.blocks,...r.payBlocks,...r.doneBlocks,...r.od.onsite.blocks,...r.od.ship.blocks].forEach(b=>{if(b&&b.type=='bankinfo'&&b.text==null)b.text=S.pre.bank||''});return r};
 const pfB=id=>pfBl().find(b=>b.id==id);
 function pfSetB(id,k,v){const b=pfB(id);if(b)b[k]=v}
 function pfSetOpt(id,j,v){const b=pfB(id);if(b&&b.opts[j])b.opts[j]=typeof b.opts[j]=='object'?Object.assign(b.opts[j],{label:v}):v}
@@ -900,22 +900,32 @@ function pfBlk(b){
  else if(t=='note'){body=pfRteH('b:'+b.id,b.html||tplT2H(b.text||''),'輸入說明文字（選取文字後可套用格式）')}
   else if(t=='paybtn'){body=`${lab('按鈕文字')}<div class="sub" style="margin:8px 0 0">按鈕會連到這筆訂單專屬的匯款回報頁（只有現場取貨的客人需要）</div>`}
  else if(t=='divider'){body='<div class="pf-hr"></div>'}
+  else if(t=='space'){const h=b.h||24;body=`<div class="pf-space"><span>空白高度</span><input type="range" min="4" max="120" step="4" value="${h}" oninput="pfSetB('${b.id}','h',+this.value);this.nextElementSibling.textContent=this.value+'px'"><b>${h}px</b></div>`}
  else if(t=='image'){body=`${b.url?`<div class="pf-imw" style="${pfImgSt(b)}"><img src="${esc(b.url)}" alt="" draggable="false">${['tl','tr','bl','br'].map(h=>`<i class="pf-hd2 ${h}" onpointerdown="pfImgRs(event,'${b.id}','${h}')"></i>`).join('')}<span class="pf-sz">${b.size||100}%</span></div><div class="sub" style="margin:8px 0 0;font-size:12px">拖曳圖片四個角可以放大縮小</div>`:'<div class="pf-img ph">尚未選擇圖片</div>'}<div class="row" style="gap:8px;margin-top:8px;justify-content:flex-start"><label class="p2 sm" style="display:inline-block">${b.url?'替換圖片':'上傳圖片'}<input type="file" accept="image/*" hidden onchange="pfImg('${b.id}',this.files[0]);this.value=''"></label><input class="pf-mini" style="flex:1;min-width:0;margin:0" value="" placeholder="或在這裡貼上圖片" autocomplete="off" autocapitalize="off" onpaste="pfPasteImg(event,'${b.id}')" oninput="this.value=''"></div><div class="sub" style="margin:10px 0 4px">對齊方式</div><div class="chips" style="margin:0">${[['left','靠左'],['center','置中'],['right','靠右']].map(x=>`<button class="chip ${(b.align||'center')==x[0]?'on':''}" onclick="pfSetB('${b.id}','align','${x[0]}');pfEdit(1)">${x[1]}</button>`).join('')}</div>`}
  else if(t=='ordersum'){body=`${lab('標題')}<div class="sub" style="margin:8px 0 0">自動顯示客人的訂單品項與應付金額</div>`}
-  else if(t=='bankinfo'){body=`${lab('標題')}<div class="sub" style="margin:8px 0 0;white-space:pre-wrap">顯示「寄信設定」裡的匯款資訊：${esc(pfv('bank')||'（尚未填寫）')}</div>`}
+  else if(t=='bankinfo'){body=`${lab('標題')}<textarea rows="3" placeholder="銀行（代碼）／帳號／戶名" style="margin-top:8px" oninput="pfSetB('${b.id}','text',this.value)">${esc(b.text||'')}</textarea><div class="sub" style="margin:6px 0 0;font-size:12px">直接在這裡編輯，只影響表單頁面；信件仍使用「信件模板 → 匯款資訊與賣場連結」的設定。</div>`}
   else if(t=='last5'){body=`${lab('欄位標題')}${ph()}<div class="sub" style="margin:8px 0 0">必填，客人要填 5 位數字</div>`}
   else if(t=='section'){body=lab('區塊標題','sec')+pfAl(b)}
  else{body=`${lab('欄位標題')}${['text','textarea','email','url','tel','number'].includes(t)?ph():''}`}
- return `<div class="sw pf-blk ${cp?'s2':''}" data-b="${b.id}">${cp?`<button class="cp2" onclick="pfCopy('${b.id}')">複製</button>`:''}<button class="del" onclick="pfDel('${b.id}')">刪除</button><div class="in"><div class="pf-bh">${hd}<span class="tag">${PF_N[t]}</span>${rq}${del}</div>${body}${pfGapUI(b)}</div></div>`}
+ return `<div class="sw pf-blk ${cp?'s2':''}" data-b="${b.id}">${cp?`<button class="cp2" onclick="pfCopy('${b.id}')">複製</button>`:''}<button class="del" onclick="pfDel('${b.id}')">刪除</button><div class="in"><div class="pf-bh">${hd}<span class="tag">${PF_N[t]}</span>${rq}${del}</div>${body}</div></div>`}
 
 /* ---- 元件間距 ---- */
-const pfGapOf=b=>b&&b.gap!=null&&b.gap!==''?Math.max(0,Math.min(80,+b.gap||0)):16;
-const pfGapUI=b=>{const g=pfGapOf(b);return `<div class="pf-gap"><span>與上方間距</span><input type="range" min="0" max="64" step="2" value="${g}" oninput="pfSetB('${b.id}','gap',+this.value);this.nextElementSibling.textContent=this.value+'px'"><b>${g}px</b></div>`};
+const pfGapOf=b=>b&&b.type=='space'?0:16;
 /* ---- 文字格式編輯器（純文字說明用） ---- */
 let RTE=null;
 document.addEventListener('selectionchange',()=>{const sl=getSelection();if(!sl.rangeCount)return;const n=sl.anchorNode,e=n&&(n.nodeType==1?n:n.parentElement),ed=e&&e.closest&&e.closest('.rte-ed');if(ed)RTE={el:ed,r:sl.getRangeAt(0).cloneRange()}});
-function pfRteH(k,html,ph,cls){const al=(n,p,t)=>`<button class="chip ib" aria-label="${t}" onclick="rteCmd('justify${n}')"><svg viewBox="0 0 24 24"><path d="${p}"/></svg></button>`;
- return `<div class="rte ${cls||''}" data-k="${k}"><div class="rte-tb" onmousedown="if(!event.target.closest('select,input'))event.preventDefault()"><button class="chip" onclick="rteCmd('bold')"><b>B</b></button><button class="chip" onclick="rteCmd('italic')"><i style="font-family:serif">I</i></button><button class="chip" onclick="rteCmd('underline')"><u>U</u></button><select onchange="rteSize(this.value);this.value=''"><option value="">字級</option><option value="12px">小</option><option value="15px">一般</option><option value="18px">大</option><option value="22px">特大</option></select><label class="chip ib" aria-label="文字色" style="display:inline-flex;align-items:center;gap:4px">色<input type="color" value="#d32f2f" oninput="rteCmd('foreColor',this.value)"></label>${al('Left','M4 6h16M4 10h10M4 14h16M4 18h10','靠左')}${al('Center','M4 6h16M7 10h10M4 14h16M7 18h10','置中')}${al('Right','M4 6h16M10 10h10M4 14h16M10 18h10','靠右')}<button class="chip ib" aria-label="連結" onclick="rteLink()"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.700 0l3-3a4 4 0 0 0-5.700-5.700l-1 1"/><path d="M14 10a4 4 0 0 0-5.700 0l-3 3a4 4 0 0 0 5.700 5.700l1-1"/></svg></button><button class="chip" onclick="rteCmd('removeFormat')">清除格式</button></div><div class="rte-ed" contenteditable="true" data-ph="${esc(ph||'')}" oninput="rteSync(this)">${html||''}</div></div>`}
+function pfRteH(k,html,ph,cls){
+ const sv=p=>`<svg viewBox="0 0 24 24"><path d="${p}"/></svg>`,cr='<svg class="cr" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>';
+ return `<div class="rte ${cls||''}" data-k="${k}"><div class="rte-tb tpl-tb" onmousedown="if(event.target.tagName!='SELECT'&&event.target.tagName!='INPUT')event.preventDefault()"><div class="tpl-pop"></div><span style="display:flex;gap:6px;align-items:center;flex-wrap:nowrap"><button class="chip ib" aria-label="上一步" onclick="rteCmd('undo')">${sv('M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3')}</button><button class="chip ib" aria-label="下一步" onclick="rteCmd('redo')">${sv('M15 14l5-5-5-5M20 9H10a6 6 0 0 0 0 12h3')}</button><button class="chip" onclick="rteCmd('bold')"><b>B</b></button><button class="chip" onclick="rteCmd('italic')"><i style="font-family:serif">I</i></button><button class="chip" onclick="rteCmd('underline')"><u>U</u></button><select onchange="rteSize(this.value);this.value=''"><option value="">字級</option><option value="12px">小</option><option value="15px">一般</option><option value="18px">大</option><option value="22px">特大</option></select></span><button class="chip ib" aria-label="文字色" onclick="rtePop('fore',this)"><svg viewBox="0 0 24 24"><path d="M6 16L12 3l6 13M8.5 11.5h7"/><path class="rte-fb" d="M4 21h16" style="stroke:#d32f2f;stroke-width:3.5"/></svg>${cr}</button><button class="chip ib" aria-label="底色" onclick="rtePop('back',this)"><svg viewBox="0 0 24 24"><path d="M5 15l7-11 7 7-6 6H9z"/><path class="rte-bb" d="M4 21h16" style="stroke:#fff3a0;stroke-width:3.5"/></svg>${cr}</button><button class="chip ib" aria-label="連結" onclick="rteLink()">${sv('M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1')}</button><button class="chip ib" aria-label="對齊" onclick="rtePop('al',this)">${sv('M4 6h16M4 10h10M4 14h16M4 18h10')}${cr}</button><button class="chip" onclick="rteCmd('removeFormat')">清除格式</button></div><div class="rte-ed" contenteditable="true" data-ph="${esc(ph||'')}" oninput="rteSync(this)">${html||''}</div></div>`}
+/* 文字格式的彈出選單（對齊／文字色／底色），和信件模板編輯器一樣 */
+function rtePopX(el){const p=el.closest?el.closest('.tpl-pop'):el;if(!p)return;p.style.display='none';const tb=p.closest('.tpl-tb');if(tb)tb.dataset.pop=''}
+function rtePop(k,btn){const tb=btn.closest('.tpl-tb'),p=tb.querySelector('.tpl-pop');if(!p)return;if(tb.dataset.pop==k&&p.style.display=='block'){rtePopX(p);return}tb.dataset.pop=k;
+ const AL={Left:['靠左','M4 6h16M4 10h10M4 14h16M4 18h10'],Center:['置中','M4 6h16M7 10h10M4 14h16M7 18h10'],Right:['靠右','M4 6h16M10 10h10M4 14h16M10 18h10']};let h='';
+ if(k=='al')h=Object.keys(AL).map(n=>`<button class="chip ib" aria-label="${AL[n][0]}" onclick="rteCmd('justify${n}');rtePopX(this)"><svg viewBox="0 0 24 24"><path d="${AL[n][1]}"/></svg></button>`).join('');
+ else{const fore=k=='fore',cmd=fore?'foreColor':'hiliteColor',ed=tb.parentElement.querySelector('.rte-ed'),a=new Set();if(ed)ed.querySelectorAll('[style]').forEach(n=>{const x=rgb2hex(fore?n.style.color:n.style.backgroundColor);if(x)a.add(x)});const used=[...a];
+  h=`<label class="chip">選擇新顏色<input type="color" value="${fore?'#d32f2f':'#fff3a0'}" oninput="rteColor('${cmd}',this.value,this)"></label><button class="chip" onclick="rteColor('${cmd}','${fore?'#202124':'transparent'}',this);rtePopX(this)">${fore?'還原文字色':'移除底色'}</button><div class="cp">已使用的顏色</div>${used.length?`<div class="sw">${used.map(c=>`<button class="tpl-sw" style="background:${c}" aria-label="${c}" onclick="rteColor('${cmd}','${c}',this);rtePopX(this)"></button>`).join('')}</div>`:'<div class="cp" style="margin:0">（目前沒有）</div>'}`}
+ p.innerHTML=h;p.style.display='block';p.style.left=Math.max(0,Math.min(btn.offsetLeft,tb.clientWidth-(k=='al'?70:230)))+'px'}
+function rteColor(cmd,v,el){rteCmd(cmd,v);const tb=el.closest('.tpl-tb'),b=tb&&tb.querySelector(cmd=='foreColor'?'.rte-fb':'.rte-bb');if(b&&v!='transparent')b.style.stroke=v}
 function rteRestore(){if(!RTE||!document.body.contains(RTE.el))return false;RTE.el.focus();const sl=getSelection();sl.removeAllRanges();sl.addRange(RTE.r);return true}
 function rteSet(k,h,t){const p=k.split(':');if(p[0]=='b'){const b=pfB(p[1]);if(b){b.html=h;b.text=t}}else if(p[0]=='p'){PRC[p[1]]=t;PRC[p[1]+'H']=h}else if(p[0]=='o'){const d=PRC.od[p[1]];if(d){d.note=t;d.noteH=h}}}
 function rteSync(el){const k=el.closest('.rte').dataset.k;let h=tplClean(el.innerHTML);const t=tplH2T(h);if(!t)h='';rteSet(k,h,t)}
@@ -934,7 +944,7 @@ function pfHeadEd(){const cap=t=>`<div class="cap" style="margin:6px 2px 10px">$
  if(PFPAY==2)return `<input class="pf-h1" placeholder="標題（預設：已收到回報）" value="${esc(PRC.doneTitle)}" oninput="PRC.doneTitle=this.value">${pfRteH('p:doneNote',PRC.doneNoteH||tplT2H(PRC.doneNote),'說明文字','pf-note-rte')}${cap('客人回報完成、或之後再點開回報連結時，只會看到這一頁，無法重複填寫。')}`;
  if(PFPAY==1)return `<input class="pf-h1" placeholder="匯款回報頁標題（預設：匯款回報）" value="${esc(PRC.payTitle)}" oninput="PRC.payTitle=this.value">${pfRteH('p:payNote',PRC.payNoteH||tplT2H(PRC.payNote),'說明文字（選填，例如匯款後多久會確認）','pf-note-rte')}`;
  return `<input class="pf-h1" placeholder="表單標題（例如：○○ 預購）" value="${esc(PRC.title)}" oninput="PRC.title=this.value">${pfRteH('p:note',PRC.noteH||tplT2H(PRC.note),'說明文字（選填，例如截止日期、取貨說明）','pf-note-rte')}`}
-const MAIL_HEAD={copy:'填單副本',confirm:'訂單確認',store:'賣場下單通知',remind:'匯款提醒',bank:'匯款資訊'};
+const MAIL_HEAD={copy:'填單副本',confirm:'訂單確認',store:'賣場下單通知',remind:'匯款提醒',bank:'匯款資訊',received:'已收到回報'};
 function ansList(o){const a=o.ans;if(!a)return [];
  if(Array.isArray(a))return a.filter(x=>x&&x.l!=null).map(x=>({l:x.l,v:Array.isArray(x.v)?x.v.join('、'):x.v}));
  const out=[];(S.pre.blocks||[]).forEach(b=>{if(!b||b.key||!Object.prototype.hasOwnProperty.call(a,b.id))return;let v=a[b.id];if(Array.isArray(v))v=v.join('、');if(v==null||v==='')return;out.push({l:b.label||'',v:String(v)})});return out}
@@ -982,6 +992,7 @@ function pfAdd(k){if(PF_ONE.includes(k)&&pfBl().some(x=>x.type==k))return toast(
  if(k=='agree'){b.label='我同意以上條款';b.text='';b.req=1}
  if(k=='heading')b.label='標題';if(k=='section')b.label='區塊標題';
  if(k=='note'||k=='divider'||k=='image'){delete b.label;b.text='';b.url=''}
+ if(k=='space'){delete b.label;b.h=24}
  if(k=='last5'){b.req=1;b.ph='例如 12345'}if(k=='paybtn')b.label='前往回報匯款';
   pfBl().push(b);closeM();pfEdit(1);const sc=$('#pfe .pf-body');sc.scrollTop=sc.scrollHeight}
 function pfShrink(f){return new Promise((ok,no)=>{const im=new Image();im.onload=()=>{const s=Math.min(1,1280/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);c.getContext('2d').drawImage(im,0,0,c.width,c.height);c.toBlob(b=>b?ok(b):no(new Error('轉檔失敗')),'image/jpeg',.85)};im.onerror=()=>no(new Error('讀取圖片失敗'));im.src=URL.createObjectURL(f)})}
@@ -1007,29 +1018,31 @@ function pfMenu(){ANI=1;TALL=1;openM(`<div class="sh row"><span style="width:56p
  <div class="cap">修改後記得回到編輯頁按「儲存」。</div></div>`);pfFbShow()}
 let PTM='onsite';
 function pfFbShow(){const e=document.getElementById('pf_fbv');if(!e)return;const raw=String((PRC&&PRC.formBase)||'').trim();if(raw&&!pfNormBase(raw)){e.textContent='網址格式不正確';return}e.textContent='客人會收到的連結：'+(pfLink()||'（先填後台網址後才會產生）')}
-function pfTestM(bk){ANI=0;TALL=1;openM(`<div class="sh row"><button class="p2" onclick="${bk||'pfMenu()'}">返回</button><b style="font-size:17px">寄送測試信</b><span style="width:56px"></span></div><div class="sbody"><div class="chips" id="ptc" style="margin-bottom:12px"><button class="chip ${PTM=='onsite'?'on':''}" data-m="onsite" onclick="pfTestMode('onsite')">場取</button><button class="chip ${PTM=='ship'?'on':''}" data-m="ship" onclick="pfTestMode('ship')">通販</button></div><div class="pf-card" style="padding:14px 16px"><label class="pf-f" style="margin:0"><span>收件信箱</span><input id="pt_e" type="email" autocapitalize="off" value="${esc(S.pre.testMail||(USER&&USER.email)||'')}"></label></div><button class="btn" style="width:100%;margin-top:12px" onclick="pfTestSend()">寄出測試信</button><div class="cap">場取會寄「填單副本」與「訂單確認信」，通販會寄「填單副本」與「賣場連結信」，內容為目前已儲存的模板與設定。</div></div>`)}
+function pfTestM(bk){ANI=0;TALL=1;openM(`<div class="sh row"><button class="p2" onclick="${bk||'pfMenu()'}">返回</button><b style="font-size:17px">寄送測試信</b><span style="width:56px"></span></div><div class="sbody"><div class="chips" id="ptc" style="margin-bottom:12px"><button class="chip ${PTM=='onsite'?'on':''}" data-m="onsite" onclick="pfTestMode('onsite')">場取</button><button class="chip ${PTM=='ship'?'on':''}" data-m="ship" onclick="pfTestMode('ship')">通販</button></div><div class="pf-card" style="padding:14px 16px"><label class="pf-f" style="margin:0"><span>收件信箱</span><input id="pt_e" type="email" autocapitalize="off" value="${esc(S.pre.testMail||(USER&&USER.email)||'')}"></label></div><button class="btn" style="width:100%;margin-top:12px" onclick="pfTestSend()">寄出測試信</button><div class="cap">場取會寄「填單副本」「訂單確認信」與「已收到回報信」，通販會寄「填單副本」與「賣場連結信」，內容為目前已儲存的模板與設定。</div></div>`)}
 function pfTestMode(m){PTM=m;document.querySelectorAll('#ptc .chip').forEach(c=>c.classList.toggle('on',c.dataset.m==m))}
 async function pfTestSend(){const em=($('#pt_e').value||'').trim();if(!/^\S+@\S+\.\S+$/.test(em))return toast('請輸入正確的信箱');const api=String(S.pre.api||(PRC&&PRC.api)||'').trim();if(!/^https:\/\/script\.google\.com\//.test(api))return toast('請先到設定頁的寄信設定填後台網址');if(!sb||!USER)return toast('請先登入');
  const p=(PRC&&PRC.pids.map(id=>P(id)).find(x=>x&&!x.off))||S.products.find(x=>inEv(x)&&!x.off)||S.products[0];if(!p)return toast('請先新增商品');
  S.pre.testMail=em;const id=Date.now()*1000+Math.floor(Math.random()*1000),no=String(S.nid++).padStart(3,'0').slice(-3),kind=PTM=='ship'?'store':'remind';
  S.orders.unshift({id,ev:S.cur,no,time:id,items:[{pid:p.id,name:p.name,price:p.price,qty:1,gift:false,cost:ucost(p)}],disc:0,total:p.price,recv:0,type:'pre',status:'已填單',note:'測試',link:'',rw:[],cust:0,src:'form',mode:PTM,email:em,memo:'測試信',seen:true,test:1});lsave();qo(id);toast('寄送中…');
  try{for(let n=0;n<12;n++){await flush();if(!Q.some(q=>q.id==id))break;await new Promise(r=>setTimeout(r,400))}
-  const jwt=await mailJwt(),kinds=PTM=='ship'?['copy','store']:['copy','confirm'],bad=[];let ok=0;
+  const jwt=await mailJwt(),kinds=PTM=='ship'?['copy','store']:['copy','confirm','received'],bad=[];let ok=0;
   for(const kd of kinds){try{const r=await fetch(api,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'mail',jwt,orderId:id,kind:kd,formUrl:pfLink(),formBase:pfBase()})}),j=await r.json();if(!j.ok)throw new Error(j.err||'後台回應失敗');ok++}catch(e){bad.push(TPL_INFO[kd][0]+'：'+errMsg(e))}}
   if(bad.length)alertM('已寄出 '+ok+' 封；失敗：'+bad.join('；'));else toast('測試信已寄出（'+ok+' 封）')}
  catch(e){alertM('寄信失敗：'+errMsg(e))}
  finally{S.orders=S.orders.filter(x=>x.id!=id);lsave();qod(id);save()}}
 let MC=null;
-function mailEd(kind,fm){MC={bank:S.pre.bank||'',days:S.pre.days||3,shop:S.pre.shop||'',sender:S.pre.sender||'',api:S.pre.api||'',formBase:S.pre.formBase||''};const inf=kind=='info';ANI=1;TALL=1;openM(`<div class="sh row"><button class="p2" onclick="${inf?`tplM(${fm?1:0})`:'closeM()'}">取消</button><b style="font-size:17px">${inf?'匯款與賣場':'寄信設定'}</b><button class="p2" style="background:var(--ac);color:#fff" onclick="mailCfgOk('${kind}',${fm?1:0})">完成</button></div><div class="sbody"><div class="pf-card" style="padding:14px 16px">${inf?`
+function mailEd(kind,fm){MC={bank:S.pre.bank||'',days:S.pre.days||3,shop:S.pre.shop||'',sender:S.pre.sender||'',api:S.pre.api||'',formBase:S.pre.formBase||'',ownerMail:S.pre.ownerMail||''};const inf=kind=='info';ANI=1;TALL=1;openM(`<div class="sh row"><button class="p2" onclick="${inf?`tplM(${fm?1:0})`:'closeM()'}">取消</button><b style="font-size:17px">${inf?'匯款與賣場':'寄信設定'}</b><button class="p2" style="background:var(--ac);color:#fff" onclick="mailCfgOk('${kind}',${fm?1:0})">完成</button></div><div class="sbody"><div class="pf-card" style="padding:14px 16px">${inf?`
  <label class="pf-f"><span>匯款資訊（寄給場取的客人）</span><textarea rows="3" placeholder="銀行（代碼）／帳號／戶名" oninput="MC.bank=this.value">${esc(MC.bank)}</textarea></label>
  <label class="pf-f" style="margin:0"><span>賣場連結（好賣，通販用）</span><input placeholder="https://" autocapitalize="off" value="${esc(MC.shop)}" oninput="MC.shop=this.value"></label>`:`
  <label class="pf-f"><span>寄件人名稱（不填則顯示「預購通知」）</span><input value="${esc(MC.sender)}" oninput="MC.sender=this.value"></label>
  <label class="pf-f" style="margin:0"><span>後台網址（Apps Script 部署後的網址）</span><input placeholder="https://script.google.com/macros/s/…/exec" autocapitalize="off" value="${esc(MC.api)}" oninput="MC.api=this.value"></label>
- <label class="pf-f" style="margin:12px 0 0"><span>預購表單網址（Netlify 等；留空＝用目前網站）</span><input placeholder="https://你的網站.netlify.app/" inputmode="url" autocapitalize="off" value="${esc(MC.formBase)}" oninput="MC.formBase=this.value"></label>`}</div></div>`)}
+ <label class="pf-f" style="margin:12px 0 0"><span>預購表單網址（Netlify 等；留空＝用目前網站）</span><input placeholder="https://你的網站.netlify.app/" inputmode="url" autocapitalize="off" value="${esc(MC.formBase)}" oninput="MC.formBase=this.value"></label>
+ <label class="pf-f" style="margin:12px 0 0"><span>賣家通知信箱（有新訂單時寄到這裡；留空＝用後台部署帳號的信箱）</span><input type="email" placeholder="you@gmail.com" autocapitalize="off" value="${esc(MC.ownerMail)}" oninput="MC.ownerMail=this.value"></label>`}</div></div>`)}
 const mailCfgM=()=>mailEd('set'),mailInfoM=fm=>mailEd('info',fm);
 function mailCfgOk(kind,fm){const c=MC,inf=kind=='info',api=String(c.api||'').trim();if(!inf&&api&&!/^https:\/\/script\.google\.com\//.test(api))return toast('後台網址應該是 script.google.com 開頭');
  if(!inf&&String(c.formBase||'').trim()&&!pfNormBase(c.formBase))return toast('預購表單網址格式不正確');
- const v=inf?{bank:String(c.bank||'').trim(),shop:String(c.shop||'').trim()}:{sender:String(c.sender||'').trim(),api,formBase:pfNormBase(c.formBase)};
+ if(!inf&&String(c.ownerMail||'').trim()&&!/^\S+@\S+\.\S+$/.test(String(c.ownerMail).trim()))return toast('賣家通知信箱格式不正確');
+ const v=inf?{bank:String(c.bank||'').trim(),shop:String(c.shop||'').trim()}:{sender:String(c.sender||'').trim(),api,formBase:pfNormBase(c.formBase),ownerMail:String(c.ownerMail||'').trim()};
  Object.assign(S.pre,v,{ts:Date.now()});S.pre.formUrl=pfLink();if(PRC)Object.assign(PRC,v);save();toast('已儲存');inf?tplM(fm):closeM()}
 function pfDeadlineCheck(){const d=S.pre.deadline;if(!S.pre.open||!d)return;const x=new Date(d).getTime();if(!x||Date.now()<x)return;S.pre.open=false;S.pre.ts=Date.now();save();toast('已到截止填單時間，表單已自動關閉');if(PRC&&$('#pfe').classList.contains('on'))pfEdit(1);if(cur==3)r3()}
 setInterval(pfDeadlineCheck,15000);setTimeout(pfDeadlineCheck,1500);
@@ -1041,8 +1054,9 @@ function pvField(b){const t=b.type,L=`<div class="pv-l">${esc(b.label||'')}${b.r
  if(t=='note')return `<div class="pv-tx ${b.html?'rich':''}" style="${AL}">${b.html||esc(b.text||'')}</div>`;
   if(t=='paybtn')return `<button class="pf-btn" style="width:100%" disabled>${esc(b.label||'前往回報匯款')}</button>`;
  if(t=='divider')return '<div class="pf-hr"></div>';
+  if(t=='space')return `<div style="height:${b.h||24}px"></div>`;
   if(t=='ordersum')return `<div class="pvs" style="margin-top:0"><div class="pvs-h"><span>品項</span><span>數量</span><span>金額</span></div><div class="pvs-r"><span>商品 A</span><span>2</span><span>$ 300</span></div><div class="pf-hr" style="margin:10px 0"></div><div class="row"><b>${PFPAY==3?'合計':'應付'}</b><b style="font-size:18px">$ 300</b></div></div>`;
-  if(t=='bankinfo')return `<div class="pv-l">${esc(b.label||'匯款資訊')}</div><div style="white-space:pre-wrap">${esc(pfv('bank')||'（尚未填寫匯款資訊）')}</div>`;
+  if(t=='bankinfo')return `<div class="pv-l">${esc(b.label||'匯款資訊')}</div><div style="white-space:pre-wrap">${esc(b.text||pfv('bank')||'（尚未填寫匯款資訊）')}</div>`;
   if(t=='last5')return `${L}<input type="text" inputmode="numeric" maxlength="5" placeholder="${p}">`;
  if(t=='image')return b.url?`<img class="pf-img" style="${pfImgSt(b)}" src="${esc(b.url)}" alt="">`:'';
  if(t=='products')return `<div id="pvprod"></div>`;
@@ -1117,8 +1131,8 @@ function pfToggle(){if(S.pre.open){S.pre.open=false}else{const api=String(S.pre.
 async function pfStop(){if(!await ask('確認停止發布？客人打開連結會看到「尚未開放」。','停止發布'))return;S.pre.open=false;S.pre.ts=Date.now();save();pfEdit(1);toast('已停止發布')}
 async function pfClose(){const dirty=JSON.stringify(PRC)!==PRC0;if(dirty&&!await ask('有尚未儲存的修改，確定離開？','離開'))return;$('#pfe').classList.remove('on');PRC=null;r3()}
 /* ---- 信件模板：清單 → 編輯／預覽 ---- */
-const TPL_INFO={copy:['填單副本','填單後自動寄出（版面和客人填的表單一樣）'],confirm:['訂單確認信','填單後自動寄出（場取：含匯款資訊與回報連結）'],remind:['匯款提醒信','訂單詳情按鈕寄出（場取・尚未匯款）'],store:['賣場連結信','通販：在訂單詳情手動按「寄賣場連結信」寄出']};
-const TPL_VARS=['{暱稱}','{訂單編號}','{商品清單}','{總額}','{取貨方式}','{期限}','{下單期限}','{匯款資訊}','{回報連結}','{賣場連結}','{填寫內容}','{店名}'];
+const TPL_INFO={copy:['填單副本','填單後自動寄出（版面和客人填的表單一樣）'],confirm:['訂單確認信','填單後自動寄出（場取：含匯款資訊與回報連結）'],remind:['匯款提醒信','訂單詳情按鈕寄出（場取・尚未匯款）'],store:['賣場連結信','通販：在訂單詳情手動按「寄賣場連結信」寄出'],received:['已收到回報信','客人回報匯款後自動寄出（場取）']};
+const TPL_VARS=['{暱稱}','{訂單編號}','{商品清單}','{總額}','{取貨方式}','{期限}','{下單期限}','{匯款資訊}','{回報連結}','{賣場連結}','{填寫內容}','{店名}','{後五碼}'];
 function tplM(fm){TPD=null;ANI=1;TALL=1;const back=fm?'pfMenu()':'closeM()';
  openM(`<div class="sh row"><button class="p2" onclick="${back}">${fm?'返回':'關閉'}</button><b style="font-size:17px">信件模板</b><span style="width:56px"></span></div><div class="sbody"><div class="cap" style="margin:0 0 10px">點選模板即可編輯與預覽。</div><div class="grp">${Object.keys(TPL_INFO).map(k=>`<div class="li" onclick="tplOpen('${k}',${fm?1:0})"><span style="min-width:0;flex:1"><b>${TPL_INFO[k][0]}</b><div class="sub" style="margin:2px 0 0">${TPL_INFO[k][1]}</div><div class="sub" style="margin:2px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62vw">${esc(S.pre.tpl[k].s)}</div></span>${I.chev}</div>`).join('')}</div><div class="grp" style="margin-top:12px"><div class="li" onclick="mailInfoM(${fm?1:0})"><span class="rw">匯款資訊與賣場連結</span>${I.chev}</div></div></div>`)}
 const tplT2H=t=>String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
@@ -1129,7 +1143,7 @@ function tplClean(html){const d=document.createElement('div');d.innerHTML=html;c
 const tplH2T=h=>{const d=document.createElement('div');d.innerHTML=String(h).replace(/<br\s*\/?>/gi,'\n').replace(/<\/(div|p)>/gi,'\n');return d.textContent.replace(/\n{3,}/g,'\n\n').trim()};
 function tplOpen(k,fm){const t=S.pre.tpl[k],h=t.h||tplT2H(t.b),lt=Object.assign({pay:'點此回報匯款',shop:'前往賣場'},S.pre.linkTxt||{});TPD={k,fm,s:t.s,h,v:0,lt,s0:t.s,h0:h,l0:JSON.stringify(lt)};tplR()}
 const fmtDue=v=>{const m=String(v||'').match(/^\d+-(\d+)-(\d+)/);return m?(+m[1])+'/'+(+m[2]):''};
-function tplFill(s,md){const d=new Date(Date.now()+(Math.max(1,+pfv('days')||3))*864e5),m={'{下單期限}':fmtDue(pfv('shopDue'))||'（未設定）','{暱稱}':'小明','{訂單編號}':'0123','{商品清單}':'・商品 A ×2　$300\n・商品 B ×1　$150','{總額}':'$450','{取貨方式}':md=='ship'?'通販（賣場下單）':'現場取貨','{期限}':fmtDue(pfv('payDue'))||((d.getMonth()+1)+'/'+d.getDate()),'{匯款資訊}':pfv('bank')||'（尚未填寫匯款資訊）','{回報連結}':'https://（匯款回報頁面）','{賣場連結}':pfv('shop')||'https://（賣場連結）','{店名}':pfv('sender')||'店名','{填寫內容}':'・商品：商品 A ×2、商品 B ×1\n・領取方式：現場取貨\n・暱稱：小明\n・社群網址：https://example.com\n・Email：test@example.com'};if(md=='ship'){m['{匯款資訊}']='';m['{期限}']='';m['{回報連結}']=''}else if(md=='onsite')m['{賣場連結}']='';return s.replace(/\{[^}]+\}/g,x=>x in m?m[x]:x)}
+function tplFill(s,md){const d=new Date(Date.now()+(Math.max(1,+pfv('days')||3))*864e5),m={'{下單期限}':fmtDue(pfv('shopDue'))||'（未設定）','{暱稱}':'小明','{訂單編號}':'0123','{商品清單}':'・商品 A ×2　$300\n・商品 B ×1　$150','{總額}':'$450','{取貨方式}':md=='ship'?'通販（賣場下單）':'現場取貨','{期限}':fmtDue(pfv('payDue'))||((d.getMonth()+1)+'/'+d.getDate()),'{匯款資訊}':pfv('bank')||'（尚未填寫匯款資訊）','{回報連結}':'https://（匯款回報頁面）','{賣場連結}':pfv('shop')||'https://（賣場連結）','{店名}':pfv('sender')||'店名','{後五碼}':'12345','{填寫內容}':'・商品：商品 A ×2、商品 B ×1\n・領取方式：現場取貨\n・暱稱：小明\n・社群網址：https://example.com\n・Email：test@example.com'};if(md=='ship'){m['{匯款資訊}']='';m['{期限}']='';m['{回報連結}']=''}else if(md=='onsite')m['{賣場連結}']='';return s.replace(/\{[^}]+\}/g,x=>x in m?m[x]:x)}
 let TPR=null;
 document.addEventListener('selectionchange',()=>{const e=document.getElementById('tp_b');if(!e)return;const sl=getSelection();if(sl.rangeCount&&e.contains(sl.anchorNode))TPR=sl.getRangeAt(0).cloneRange()});
 function tplRestore(){const e=$('#tp_b');if(!e)return false;e.focus();if(TPR){const sl=getSelection();sl.removeAllRanges();sl.addRange(TPR)}return true}
@@ -1148,7 +1162,7 @@ function tplPop(k,btn){const p=$('#tp_pop');if(!p)return;if(TPPOP==k&&p.style.di
 function tplPopX(){const p=$('#tp_pop');if(p)p.style.display='none';TPPOP=''}
 function tplColor(cmd,v){tplCmd(cmd,v);const b=$(cmd=='foreColor'?'#tp_fb':'#tp_bb');if(b&&v!='transparent')b.style.stroke=v}
 function tplIns(v){if(!tplRestore())return;document.execCommand('insertText',false,v);tplSync()}
-function tplFillH(h,md,lt){h=h.replace(/\{[^{}]*\}/g,m=>m.replace(/<[^>]+>/g,'')).replace(/href="\{([^}]+)\}"/g,(m,k)=>'href="'+esc(tplFill('{'+k+'}',md))+'"');return h.replace(/\{[^}]+\}/g,x=>{const v=tplFill(x,md);if(x=='{回報連結}'||x=='{賣場連結}')return v&&!/^https:\/\/（/.test(v)?`<a href="${esc(v)}" style="display:inline-block;background:#2f2f33;color:#fff;text-decoration:none;font-weight:700;border-radius:14px;padding:11px 20px">${esc(x=='{回報連結}'?lt.pay:lt.shop)}</a>`:(v?`<span style="display:inline-block;background:#2f2f33;color:#fff;text-decoration:none;font-weight:700;border-radius:14px;padding:11px 20px">${esc(x=='{回報連結}'?lt.pay:lt.shop)}</span>`:'');return esc(v).replace(/\n/g,'<br>')})}
+function tplFillH(h,md,lt){h=h.replace(/\{[^{}]*\}/g,m=>m.replace(/<[^>]+>/g,'')).replace(/href="\{([^}]+)\}"/g,(m,k)=>'href="'+esc(tplFill('{'+k+'}',md))+'"');return h.replace(/\{[^}]+\}/g,x=>{const v=tplFill(x,md);if(x=='{回報連結}'||x=='{賣場連結}')return v&&!/^https:\/\/（/.test(v)?`<a href="${esc(v)}" style="display:inline-block;background:#2f2f33;color:#fff;text-decoration:none;font-weight:700;border-radius:12px;padding:8px 18px;font-size:14px;line-height:1.4">${esc(x=='{回報連結}'?lt.pay:lt.shop)}</a>`:(v?`<span style="display:inline-block;background:#2f2f33;color:#fff;text-decoration:none;font-weight:700;border-radius:12px;padding:8px 18px;font-size:14px;line-height:1.4">${esc(x=='{回報連結}'?lt.pay:lt.shop)}</span>`:'');return esc(v).replace(/\n/g,'<br>')})}
 function tplR(){const d=TPD,i=TPL_INFO[d.k];ANI=0;TALL=1;
  openM(`<div class="sh row"><button class="p2" onclick="tplBack()">返回</button><b style="font-size:17px">${i[0]}</b><button class="p2" style="background:var(--ac);color:#fff" onclick="tplSave()">儲存</button></div><div class="sbody"><div class="chips" style="margin-bottom:12px"><button class="chip ${d.v?'':'on'}" onclick="tplV(0)">編輯</button><button class="chip ${d.v?'on':''}" onclick="tplV(1)">預覽</button></div>
  ${d.v?`<div class="sub" style="margin:0 2px 8px">以範例資料預覽，實際寄出會換成該筆訂單的內容。</div><div style="background:#f2f2f2;color:#1f1f21;border-radius:16px;padding:14px"><div style="font-size:12px;color:#8c8c91;margin:0 2px">${esc(pfv('sender')||'店名')}</div><div style="font-size:24px;font-weight:700;margin:2px 2px 10px">${MAIL_HEAD[d.k]||''} #0123</div><div style="background:#fff;border-radius:16px;padding:16px 18px;line-height:1.8;font-size:15px;word-break:break-word">${tplFillH(d.h,d.k=='store'?'ship':'onsite',d.lt)}</div></div><div class="sub" style="margin:8px 2px 0;font-size:12px">信件標題：${esc(tplFill(d.s))}</div>`
