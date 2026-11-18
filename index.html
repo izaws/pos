@@ -590,7 +590,8 @@ async function completePending(id){
 
 function qreset(){Q=[{t:'reset'},{t:'state'},...S.orders.map(o=>({t:'o',id:o.id}))];saveQ();flushSoon()}
 function flushSoon(){clearTimeout(ft);ft=setTimeout(flush,500)}
-const stateData=()=>({events:S.events,products:S.products,groups:S.groups,works:S.works,rules:S.rules,nid:S.nid,pre:S.pre});
+const stateData=()=>({events:S.events,products:S.products,groups:S.groups,works:S.works,rules:S.rules,nid:S.nid,nidv:S.nidv||0,pre:S.pre});
+let NIDFIX=false;
 async function upImg(blob){const path=USER.id+'/'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'.jpg';const r=await sb.storage.from('product-images').upload(path,blob,{contentType:'image/jpeg',cacheControl:'31536000'});if(r.error)throw r.error;return sb.storage.from('product-images').getPublicUrl(path).data.publicUrl}
 async function migrateImgs(){IMGERR='';for(const p of S.products){if(p.img&&p.img.startsWith('data:')){try{const b=await (await fetch(p.img)).blob();p.img=await upImg(b);lsave()}catch(e){IMGERR=errMsg(e)}}if(p.imgs)for(let i=0;i<p.imgs.length;i++){const u=p.imgs[i];if(u&&u.startsWith('data:')){try{const b=await (await fetch(u)).blob();p.imgs[i]=await upImg(b);lsave()}catch(e){IMGERR=errMsg(e)}}}}}
 async function flush(){if(!sb||!USER||flushing||!navigator.onLine){setSync();return}flushing=true;
@@ -605,7 +606,7 @@ else if(op.t=='reset')r=await sb.from('pos_orders').delete().eq('user_id',USER.i
 if(r&&r.error)throw r.error;slog('上傳 '+op.t+(op.id?' '+op.id:'')+' 成功');if(op.t==='sale_state'){const order=S.orders.find(x=>String(x.id)===String(op.id));const ok=await completePending(op.id);if(!ok){Q[0]={t:'mark_done',id:op.id};saveQ();throw new Error('同步完成標記未成功，稍後重試')}markLocalCompleted(order);await fetchRemotePending()}else if(op.t==='mark_done'){const order=S.orders.find(x=>String(x.id)===String(op.id));const ok=await completePending(op.id);if(!ok)throw new Error('同步完成標記未成功，稍後重試');markLocalCompleted(order);await fetchRemotePending()}Q.shift();saveQ();if(op.t==='o'||op.t==='sale_state'){if(cur===0)r0();setSync()}}
 SYNERR=false;SYNMSG=''}catch(e){SYNERR=true;SYNMSG=errMsg(e);slog('上傳失敗：'+SYNMSG);setTimeout(flush,15000)}
 flushing=false;setSync();if(PENDING_TABLE_OK&&navigator.onLine)fetchRemotePending()}
-function applyRemote(d,rows){const cur=S.cur;S.events=d.events&&d.events.length?d.events:S.events;S.products=d.products||[];S.groups=d.groups||[];S.works=d.works||S.works||[];S.rules=d.rules||{full:[],buy:[]};S.nid=Math.max(S.nid||1,d.nid||1);if(d.pre&&!((S.pre.ts||0)>(d.pre.ts||0))){S.pre=Object.assign({},S.pre,d.pre);S.pre.tpl=Object.assign(DEF_TPL(),S.pre.tpl||{});tplMig()}S.orders=rows.map(r=>r.data).sort((a,b)=>b.time-a.time);migOrders();migProds();if(!S.events.some(e=>e.id==cur))S.cur=S.events[0].id;Object.keys(cart).forEach(id=>{if(!P(id)){delete cart[id];delete gift[id]}});lsave()}
+function applyRemote(d,rows){const cur=S.cur;S.events=d.events&&d.events.length?d.events:S.events;S.products=d.products||[];S.groups=d.groups||[];S.works=d.works||S.works||[];S.rules=d.rules||{full:[],buy:[]};{const rv=d.nidv||0,lv=S.nidv||0;if(rv>lv){S.nid=d.nid||1;S.nidv=rv}else if(rv===lv){S.nid=Math.max(S.nid||1,d.nid||1)}else{NIDFIX=true}}if(d.pre&&!((S.pre.ts||0)>(d.pre.ts||0))){S.pre=Object.assign({},S.pre,d.pre);S.pre.tpl=Object.assign(DEF_TPL(),S.pre.tpl||{});tplMig()}S.orders=rows.map(r=>r.data).sort((a,b)=>b.time-a.time);migOrders();migProds();if(!S.events.some(e=>e.id==cur))S.cur=S.events[0].id;Object.keys(cart).forEach(id=>{if(!P(id)){delete cart[id];delete gift[id]}});lsave();if(NIDFIX){NIDFIX=false;qstate()}}
 async function pull(force){if(!sb||!USER)return;if(Q.length||flushing){await pullOrdersOnly();return}
 try{const [a,b]=await Promise.all([sb.from('pos_state').select('data').eq('user_id',USER.id).maybeSingle(),sb.from('pos_orders').select('data').eq('user_id',USER.id).order('id',{ascending:false})]);if(a.error||b.error)throw (a.error||b.error);
 const jf=KEY+'_j',joined=localStorage.getItem(jf)==USER.id,mark=()=>{try{localStorage.setItem(jf,USER.id)}catch(e){}};
@@ -628,7 +629,7 @@ async function pullOrdersOnly(){
  try{
   const {data,error}=await sb.from('pos_orders').select('data').eq('user_id',USER.id);
   if(error)throw error;
-  const pending=new Set(Q.filter(q=>q.t==='o'||q.t==='od').map(q=>String(q.id)));
+  const pending=new Set(Q.filter(q=>q.t==='o'||q.t==='od'||q.t==='ou').map(q=>String(q.id)));
   const pendingEvents=new Set(Q.filter(q=>q.t==='oev').map(q=>String(q.ev)));
   const resetPending=Q.some(q=>q.t==='reset');
   const local=new Map(S.orders.map(o=>[String(o.id),o]));
@@ -816,11 +817,11 @@ async function renumber(){
  const os=S.orders.slice().sort((a,b)=>otm(a)-otm(b)),n=os.length,mailed=os.some(o=>o.src=='form'||(o.mails&&Object.keys(o.mails).length));
  const msg=n?`確定把全部 ${n} 筆訂單，依建立時間重新編號為 001～${nopad(n)}？之後的新訂單會接著編號。${mailed?'注意：已經寄給客人的信件裡的訂單編號，會和新編號不同。':''}`:'目前沒有任何訂單，確定讓下一筆新訂單從 001 開始？';
  if(!await ask(msg,'重新編號','#2f2f33'))return;
- os.forEach((o,i)=>{o.no=nopad(i+1)});S.nid=n+1;
+ os.forEach((o,i)=>{o.no=nopad(i+1)});S.nid=n+1;S.nidv=Date.now();
  save();os.forEach(o=>qou(o.id));
  toast(n?'已重新編號 001～'+nopad(n)+'，下一筆是 '+nopad(S.nid):'已重設，下一筆從 001 開始');
  if(typeof r1=='function')r1();if(typeof r3=='function')r3()}
-function delO(id){S.orders=S.orders.filter(o=>o.id!=id);if(!S.orders.length)S.nid=1;save();qod(id);r1();toast('已刪除（庫存不會還原）')}
+function delO(id){S.orders=S.orders.filter(o=>o.id!=id);if(!S.orders.length){S.nid=1;S.nidv=Date.now()}save();qod(id);r1();toast('已刪除（庫存不會還原）')}
 function detail(id){const o=S.orders.find(x=>x.id==id);if(!o)return;if(o.seen===false){o.seen=true;lsave();qou(id);const el=document.querySelector('.sw[data-id="'+id+'"] .in');if(el)el.classList.remove('nw')}
 const pre=o.type=='pre',A=S.pre.auto,form=o.src=='form',fw=pre?oFlow(o):[],ix=fw.indexOf(o.status),nxt=ix>=0?fw[ix+1]:null,prv=ix>0?fw[ix-1]:null,rv=rcv(o),ship=oMode(o)=='ship',unpaid=form&&(ship?o.status!='已取貨':(o.status=='已填單'||o.status=='已回報')),cxl=o.status=='已取消';
 const mb=pre&&(form||A)&&!cxl?(!ship&&o.status=='已填單'?['remind','寄匯款提醒信']:ship&&(o.status=='已填單'||o.status=='待下單')?['store','寄賣場連結信']:null):null;
@@ -1336,7 +1337,7 @@ ${FRIEND_CFG?`<div class="sec">資料庫設定</div><div class="grp"><div class=
 <div class="sec">帳號與同步</div><div class="grp">${accHtml()}</div>
 `;swipe('#evl ');swipe('#pfw ');loadUsage()}
 function evCopy(id){const e=S.events.find(x=>x.id==id),nid=Date.now();S.products.forEach(p=>{if(inEv(p,id))p.evs[nid]=p.evs[id]});S.events.push({id:nid,name:e.name+' 複製'});save();r3();toast('已複製場次')}
-async function evDel(id){if(S.events.length<2)return toast('至少要留一個場次');if(!await ask('確認刪除？'))return;S.events=S.events.filter(e=>e.id!=id);S.orders=S.orders.filter(o=>o.ev!=id);if(!S.orders.length)S.nid=1;S.products.forEach(p=>{if(p.evs)delete p.evs[id]});const gone=S.products.filter(p=>!Object.keys(p.evs||{}).length).map(p=>p.id);S.products=S.products.filter(p=>!gone.includes(p.id));S.products.forEach(p=>{if(p.combo)p.combo=p.combo.filter(c=>!gone.includes(c.pid))});if(S.cur==id)S.cur=S.events[0].id;save();qoev(id);render();toast('已刪除')}
+async function evDel(id){if(S.events.length<2)return toast('至少要留一個場次');if(!await ask('確認刪除？'))return;S.events=S.events.filter(e=>e.id!=id);S.orders=S.orders.filter(o=>o.ev!=id);if(!S.orders.length){S.nid=1;S.nidv=Date.now()}S.products.forEach(p=>{if(p.evs)delete p.evs[id]});const gone=S.products.filter(p=>!Object.keys(p.evs||{}).length).map(p=>p.id);S.products=S.products.filter(p=>!gone.includes(p.id));S.products.forEach(p=>{if(p.combo)p.combo=p.combo.filter(c=>!gone.includes(c.pid))});if(S.cur==id)S.cur=S.events[0].id;save();qoev(id);render();toast('已刪除')}
 function ask(m,y,c){return new Promise(ok=>{const d=$('#ask');d.innerHTML=`<div class="ab"><p>${esc(m)}</p><div><button class="p2" id="ano">取消</button><button class="p2" id="ays" style="background:${c||'var(--red)'};color:#fff">${esc(y||'刪除')}</button></div></div>`;d.classList.add('on');const f=v=>{d.classList.remove('on');ok(v)};$('#ano').addEventListener('click',()=>f(false));$('#ays').addEventListener('click',()=>f(true))})}
 function evAdd(){openM(`<h3>新增場次</h3><input id="v1" placeholder="例如：CWT 冬季場"><label class="li" style="margin-top:12px;padding:6px 2px"><span>帶入目前場次的商品與庫存</span><input type="checkbox" id="evcp" checked style="width:22px;height:22px;flex:none;padding:0"></label><br><button class="btn" style="width:100%" onclick="evAddOk()">新增並切換</button>`)}
 function evAddOk(){const n=$('#v1').value.trim();if(!n)return;const id=Date.now(),cp=$('#evcp').checked;if(cp)S.products.forEach(p=>{if(inEv(p))p.evs[id]=p.evs[S.cur]});S.events.push({id,name:n});S.cur=id;save();closeM();render()}
